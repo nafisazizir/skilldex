@@ -6,13 +6,17 @@ export { END_TAG, START_TAG } from "./lib/constants.js";
 export { parseFrontmatter } from "./lib/frontmatter.js";
 export { generateIndex } from "./lib/indexer.js";
 export { init, initWithSkills } from "./lib/init.js";
+export { listSkills } from "./lib/list.js";
 export { removeSkill } from "./lib/remove.js";
 export { scanForSkills } from "./lib/scanner.js";
 export type {
   AddResult,
+  AvailableSkillInfo,
   Config,
   DiscoveredSkill,
+  IndexedSkillInfo,
   InitResult,
+  ListResult,
   RemoveResult,
   SkillEntry,
   SkillFile,

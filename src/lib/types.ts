@@ -52,3 +52,22 @@ export interface RemoveResult {
   indexSize: number;
   agentsMdPath: string;
 }
+
+export interface IndexedSkillInfo {
+  name: string;
+  /** Relative path from project root */
+  path: string;
+  description: string;
+}
+
+export interface AvailableSkillInfo {
+  name: string;
+  description: string;
+  /** Relative path from project root */
+  path: string;
+}
+
+export interface ListResult {
+  indexed: IndexedSkillInfo[];
+  available: AvailableSkillInfo[];
+}

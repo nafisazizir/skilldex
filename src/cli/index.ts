@@ -3,6 +3,7 @@ import { Command } from "commander";
 import pc from "picocolors";
 import { addSkill } from "../lib/add.js";
 import { initWithSkills } from "../lib/init.js";
+import { listSkills } from "../lib/list.js";
 import { removeSkill } from "../lib/remove.js";
 import { scanForSkills } from "../lib/scanner.js";
 
@@ -161,9 +162,41 @@ program
 
 program
   .command("list")
-  .description("List installed skills")
-  .action(() => {
-    console.log("not yet implemented");
+  .description("List indexed and available skills")
+  .action(async () => {
+    p.intro(pc.bgCyan(pc.black(" skilldex list ")));
+
+    const projectRoot = process.cwd();
+
+    try {
+      const result = await listSkills(projectRoot);
+
+      if (result.indexed.length > 0) {
+        p.log.step(pc.bold("Indexed skills"));
+        for (const skill of result.indexed) {
+          const desc = skill.description ? pc.dim(` — ${skill.description}`) : "";
+          p.log.info(`  ${pc.green(skill.name)}${desc}`);
+          p.log.info(`  ${pc.dim(skill.path)}`);
+        }
+      } else {
+        p.log.info(pc.dim("No indexed skills."));
+      }
+
+      if (result.available.length > 0) {
+        p.log.step(pc.bold("Available skills (not indexed)"));
+        for (const skill of result.available) {
+          const desc = skill.description ? pc.dim(` — ${skill.description}`) : "";
+          p.log.info(`  ${pc.yellow(skill.name)}${desc}`);
+          p.log.info(`  ${pc.dim(`skilldex add ${skill.name}`)}`);
+        }
+      }
+
+      p.outro(pc.green("Done"));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      p.outro(pc.red(message));
+      process.exit(1);
+    }
   });
 
 program
