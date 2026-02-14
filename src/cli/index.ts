@@ -1,6 +1,7 @@
 import * as p from "@clack/prompts";
 import { Command } from "commander";
 import pc from "picocolors";
+import { addSkill } from "../lib/add.js";
 import { initWithSkills } from "../lib/init.js";
 import { scanForSkills } from "../lib/scanner.js";
 
@@ -70,10 +71,38 @@ program
   });
 
 program
-  .command("add")
+  .command("add <skill>")
   .description("Add a skill to the project")
-  .action(() => {
-    console.log("not yet implemented");
+  .action(async (skillName: string) => {
+    p.intro(pc.bgCyan(pc.black(" skilldex add ")));
+
+    const projectRoot = process.cwd();
+    const s = p.spinner();
+
+    try {
+      s.start("Adding skill...");
+      const result = await addSkill(projectRoot, skillName);
+      s.stop("✓ Skill added");
+
+      const sizeKb = result.indexSize / 1024;
+      const sizeFormatted = `${sizeKb.toFixed(1)} KB`;
+      let sizeLabel: string;
+      if (sizeKb < 20) {
+        sizeLabel = pc.green(sizeFormatted);
+      } else if (sizeKb < 40) {
+        sizeLabel = pc.yellow(sizeFormatted);
+      } else {
+        sizeLabel = pc.red(`${sizeFormatted} — may degrade agent performance`);
+      }
+
+      p.log.info(`Context size: ${sizeLabel}`);
+      p.outro(pc.green(`Added "${result.skillName}" to AGENTS.md`));
+    } catch (error) {
+      s.stop("✗ Failed");
+      const message = error instanceof Error ? error.message : String(error);
+      p.outro(pc.red(message));
+      process.exit(1);
+    }
   });
 
 program

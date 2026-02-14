@@ -1,7 +1,10 @@
-import { writeFile } from "node:fs/promises";
+import { stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { readConfig } from "./config.js";
 import { END_TAG, START_TAG } from "./constants.js";
-import { safeReadFile } from "./scanner.js";
+import { generateIndex } from "./indexer.js";
+import { safeReadFile, scanForSkills } from "./scanner.js";
+import type { InitResult } from "./types.js";
 
 export { END_TAG, START_TAG };
 
@@ -28,4 +31,28 @@ export async function writeAgentsMd(projectRoot: string, indexContent: string): 
   }
 
   await writeFile(agentsMdPath, output, "utf-8");
+}
+
+/** Regenerate AGENTS.md from config (reads config, scans indexed skills, writes AGENTS.md). */
+export async function regenerateFromConfig(projectRoot: string): Promise<InitResult> {
+  const config = await readConfig(projectRoot);
+  const allSkills = await scanForSkills(projectRoot);
+
+  // Map skill names from config to DiscoveredSkill objects
+  const skillMap = new Map(allSkills.map((s) => [s.name, s]));
+  const skills = config.skills
+    .map((entry) => skillMap.get(entry.name))
+    .filter((s) => s !== undefined);
+
+  const index = generateIndex(skills, projectRoot);
+  await writeAgentsMd(projectRoot, index);
+
+  const agentsMdPath = join(projectRoot, "AGENTS.md");
+  const statsResult = await stat(agentsMdPath);
+
+  return {
+    skillCount: skills.length,
+    indexSize: statsResult.size,
+    agentsMdPath,
+  };
 }

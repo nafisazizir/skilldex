@@ -23,3 +23,24 @@ export interface InitResult {
   /** Absolute path to the written AGENTS.md */
   agentsMdPath: string;
 }
+
+export interface SkillEntry {
+  /** Skill name (e.g., "react-best-practices") */
+  name: string;
+  /** Relative path from project root (e.g., ".agents/skills/react-best-practices") */
+  path: string;
+}
+
+export interface Config {
+  version: 1;
+  /** Which file to write to (e.g., "AGENTS.md") */
+  target: string;
+  /** List of indexed skills */
+  skills: SkillEntry[];
+}
+
+export interface AddResult {
+  skillName: string;
+  indexSize: number;
+  agentsMdPath: string;
+}
