@@ -1,14 +1,13 @@
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { CONFIG_FILENAME, TARGET_FILE } from "./constants.js";
 import { safeReadFile } from "./scanner.js";
 import type { Config } from "./types.js";
-
-const CONFIG_FILENAME = "skilldex.config.json";
 
 function getDefaultConfig(): Config {
   return {
     version: 1,
-    target: "AGENTS.md",
+    target: TARGET_FILE,
     skills: [],
   };
 }

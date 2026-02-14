@@ -2,10 +2,12 @@ import * as p from "@clack/prompts";
 import { Command } from "commander";
 import pc from "picocolors";
 import { addSkill } from "../lib/add.js";
+import { SKILLS_DIR_SEGMENTS, TARGET_FILE } from "../lib/constants.js";
 import { initWithSkills } from "../lib/init.js";
 import { listSkills } from "../lib/list.js";
 import { removeSkill } from "../lib/remove.js";
 import { scanForSkills } from "../lib/scanner.js";
+import { handleCommandError, logContextSize, pluralize } from "./format.js";
 
 const program = new Command();
 
@@ -25,14 +27,18 @@ program
     const skills = await scanForSkills(projectRoot);
 
     if (skills.length === 0) {
-      p.outro(pc.yellow("No skills found. Add skill directories to .agents/skills/"));
+      p.outro(
+        pc.yellow(`No skills found. Add skill directories to ${SKILLS_DIR_SEGMENTS.join("/")}/`),
+      );
       return;
     }
 
     let selectedSkillNames: string[];
 
     if (opts.yes) {
-      p.log.info(`Found ${skills.length} skill(s), indexing all (--yes)`);
+      p.log.info(
+        `Found ${skills.length} ${pluralize(skills.length, "skill", "skills")}, indexing all (--yes)`,
+      );
       selectedSkillNames = skills.map((s) => s.name);
     } else {
       const selected = await p.multiselect({
@@ -57,19 +63,12 @@ program
     const selectedSkills = skills.filter((s) => selectedSkillNames.includes(s.name));
     const result = await initWithSkills(projectRoot, selectedSkills);
 
-    const sizeKb = result.indexSize / 1024;
-    const sizeFormatted = `${sizeKb.toFixed(1)} KB`;
-    let sizeLabel: string;
-    if (sizeKb < 20) {
-      sizeLabel = pc.green(sizeFormatted);
-    } else if (sizeKb < 40) {
-      sizeLabel = pc.yellow(sizeFormatted);
-    } else {
-      sizeLabel = pc.red(`${sizeFormatted} — may degrade agent performance`);
-    }
-
-    p.log.info(`Context size: ${sizeLabel}`);
-    p.outro(pc.green(`Indexed ${result.skillCount} skill(s) into AGENTS.md`));
+    logContextSize(result.indexSize);
+    p.outro(
+      pc.green(
+        `Indexed ${result.skillCount} ${pluralize(result.skillCount, "skill", "skills")} into ${TARGET_FILE}`,
+      ),
+    );
   });
 
 program
@@ -86,24 +85,10 @@ program
       const result = await addSkill(projectRoot, skillName);
       s.stop("✓ Skill added");
 
-      const sizeKb = result.indexSize / 1024;
-      const sizeFormatted = `${sizeKb.toFixed(1)} KB`;
-      let sizeLabel: string;
-      if (sizeKb < 20) {
-        sizeLabel = pc.green(sizeFormatted);
-      } else if (sizeKb < 40) {
-        sizeLabel = pc.yellow(sizeFormatted);
-      } else {
-        sizeLabel = pc.red(`${sizeFormatted} — may degrade agent performance`);
-      }
-
-      p.log.info(`Context size: ${sizeLabel}`);
-      p.outro(pc.green(`Added "${result.skillName}" to AGENTS.md`));
+      logContextSize(result.indexSize);
+      p.outro(pc.green(`Added "${result.skillName}" to ${TARGET_FILE}`));
     } catch (error) {
-      s.stop("✗ Failed");
-      const message = error instanceof Error ? error.message : String(error);
-      p.outro(pc.red(message));
-      process.exit(1);
+      handleCommandError(error, s);
     }
   });
 
@@ -121,7 +106,7 @@ program
 
     if (!opts.deleteFiles) {
       const shouldDelete = await p.confirm({
-        message: `Delete skill files from disk (.agents/skills/${skillName})?`,
+        message: `Delete skill files from disk (${SKILLS_DIR_SEGMENTS.join("/")}/${skillName})?`,
         initialValue: false,
       });
 
@@ -138,25 +123,11 @@ program
       const result = await removeSkill(projectRoot, skillName, deleteFiles);
       s.stop("✓ Skill removed");
 
-      const sizeKb = result.indexSize / 1024;
-      const sizeFormatted = `${sizeKb.toFixed(1)} KB`;
-      let sizeLabel: string;
-      if (sizeKb < 20) {
-        sizeLabel = pc.green(sizeFormatted);
-      } else if (sizeKb < 40) {
-        sizeLabel = pc.yellow(sizeFormatted);
-      } else {
-        sizeLabel = pc.red(`${sizeFormatted} — may degrade agent performance`);
-      }
-
-      p.log.info(`Context size: ${sizeLabel}`);
+      logContextSize(result.indexSize);
       const suffix = result.wasDeleted ? " (files deleted)" : " (files kept on disk)";
       p.outro(pc.green(`Removed "${result.skillName}"${suffix}`));
     } catch (error) {
-      s.stop("✗ Failed");
-      const message = error instanceof Error ? error.message : String(error);
-      p.outro(pc.red(message));
-      process.exit(1);
+      handleCommandError(error, s);
     }
   });
 
@@ -173,29 +144,25 @@ program
 
       if (result.indexed.length > 0) {
         p.log.step(pc.bold("Indexed skills"));
-        for (const skill of result.indexed) {
-          const desc = skill.description ? pc.dim(` — ${skill.description}`) : "";
-          p.log.info(`  ${pc.green(skill.name)}${desc}`);
-          p.log.info(`  ${pc.dim(skill.path)}`);
-        }
+        const indexedLines = result.indexed.map(
+          (skill) => `  ${pc.green(skill.name)}  ${pc.dim(skill.path)}`,
+        );
+        p.log.info(indexedLines.join("\n"));
       } else {
         p.log.info(pc.dim("No indexed skills."));
       }
 
       if (result.available.length > 0) {
         p.log.step(pc.bold("Available skills (not indexed)"));
-        for (const skill of result.available) {
-          const desc = skill.description ? pc.dim(` — ${skill.description}`) : "";
-          p.log.info(`  ${pc.yellow(skill.name)}${desc}`);
-          p.log.info(`  ${pc.dim(`skilldex add ${skill.name}`)}`);
-        }
+        const availableLines = result.available.map(
+          (skill) => `  ${pc.yellow(skill.name)}  ${pc.dim(skill.path)}`,
+        );
+        p.log.info(availableLines.join("\n"));
       }
 
       p.outro(pc.green("Done"));
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      p.outro(pc.red(message));
-      process.exit(1);
+      handleCommandError(error);
     }
   });
 

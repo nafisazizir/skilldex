@@ -1,6 +1,7 @@
 import type { Dirent } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import { join, relative } from "node:path";
+import { SKILL_META_FILE, SKILLS_DIR_SEGMENTS } from "./constants.js";
 import { parseFrontmatter } from "./frontmatter.js";
 import type { DiscoveredSkill, SkillFile } from "./types.js";
 
@@ -29,7 +30,7 @@ async function collectMdFiles(dir: string, skillRoot: string): Promise<SkillFile
     if (entry.isDirectory()) {
       const nested = await collectMdFiles(fullPath, skillRoot);
       files.push(...nested);
-    } else if (entry.isFile() && entry.name.endsWith(".md") && entry.name !== "SKILL.md") {
+    } else if (entry.isFile() && entry.name.endsWith(".md") && entry.name !== SKILL_META_FILE) {
       files.push({
         relativePath: relative(skillRoot, fullPath),
         name: entry.name.replace(/\.md$/, ""),
@@ -41,7 +42,7 @@ async function collectMdFiles(dir: string, skillRoot: string): Promise<SkillFile
 
 /** Scan for skills in the project's `.agents/skills/` directory. */
 export async function scanForSkills(projectRoot: string): Promise<DiscoveredSkill[]> {
-  const skillsDir = join(projectRoot, ".agents", "skills");
+  const skillsDir = join(projectRoot, ...SKILLS_DIR_SEGMENTS);
   const entries = await safeReaddir(skillsDir);
   const skills: DiscoveredSkill[] = [];
 
@@ -51,7 +52,7 @@ export async function scanForSkills(projectRoot: string): Promise<DiscoveredSkil
     const skillPath = join(skillsDir, entry.name);
     let description = "";
 
-    const skillMd = await safeReadFile(join(skillPath, "SKILL.md"));
+    const skillMd = await safeReadFile(join(skillPath, SKILL_META_FILE));
     if (skillMd !== undefined) {
       const frontmatter = parseFrontmatter(skillMd);
       description = frontmatter.description ?? "";

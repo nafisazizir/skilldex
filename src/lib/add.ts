@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { readConfig, writeConfig } from "./config.js";
+import { SKILLS_DIR_SEGMENTS } from "./constants.js";
 import { scanForSkills } from "./scanner.js";
 import type { AddResult } from "./types.js";
 import { regenerateFromConfig } from "./writer.js";
@@ -22,7 +23,7 @@ export async function addSkill(projectRoot: string, skillName: string): Promise<
 
   config.skills.push({
     name: skillName,
-    path: join(".agents", "skills", skillName),
+    path: join(...SKILLS_DIR_SEGMENTS, skillName),
   });
 
   await writeConfig(projectRoot, config);

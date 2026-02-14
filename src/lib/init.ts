@@ -1,6 +1,7 @@
 import { stat } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { writeConfig } from "./config.js";
+import { TARGET_FILE } from "./constants.js";
 import { generateIndex } from "./indexer.js";
 import { scanForSkills } from "./scanner.js";
 import type { DiscoveredSkill, InitResult } from "./types.js";
@@ -38,7 +39,7 @@ export async function initWithSkills(
   // Update config file with indexed skills
   const config = {
     version: 1 as const,
-    target: "AGENTS.md",
+    target: TARGET_FILE,
     skills: skills.map((skill) => ({
       name: skill.name,
       path: relative(projectRoot, skill.path),
@@ -46,7 +47,7 @@ export async function initWithSkills(
   };
   await writeConfig(projectRoot, config);
 
-  const agentsMdPath = join(projectRoot, "AGENTS.md");
+  const agentsMdPath = join(projectRoot, TARGET_FILE);
   const stats = await stat(agentsMdPath);
 
   return {

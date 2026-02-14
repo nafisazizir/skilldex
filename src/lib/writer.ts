@@ -1,7 +1,7 @@
 import { stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { readConfig } from "./config.js";
-import { END_TAG, START_TAG } from "./constants.js";
+import { END_TAG, START_TAG, TARGET_FILE } from "./constants.js";
 import { generateIndex } from "./indexer.js";
 import { safeReadFile, scanForSkills } from "./scanner.js";
 import type { InitResult } from "./types.js";
@@ -14,7 +14,7 @@ export function buildManagedSection(indexContent: string): string {
 
 /** Write or update the managed skilldex section in AGENTS.md. Creates, appends, or replaces as needed. */
 export async function writeAgentsMd(projectRoot: string, indexContent: string): Promise<void> {
-  const agentsMdPath = join(projectRoot, "AGENTS.md");
+  const agentsMdPath = join(projectRoot, TARGET_FILE);
   const section = buildManagedSection(indexContent);
 
   const existing = await safeReadFile(agentsMdPath);
@@ -47,7 +47,7 @@ export async function regenerateFromConfig(projectRoot: string): Promise<InitRes
   const index = generateIndex(skills, projectRoot);
   await writeAgentsMd(projectRoot, index);
 
-  const agentsMdPath = join(projectRoot, "AGENTS.md");
+  const agentsMdPath = join(projectRoot, TARGET_FILE);
   const statsResult = await stat(agentsMdPath);
 
   return {

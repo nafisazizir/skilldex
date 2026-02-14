@@ -1,4 +1,5 @@
 import { dirname, relative } from "node:path";
+import { INDEX_HEADER, INDEX_INSTRUCTION } from "./constants.js";
 import type { DiscoveredSkill } from "./types.js";
 
 function groupFilesBySubdir(
@@ -19,10 +20,7 @@ function groupFilesBySubdir(
 }
 
 export function generateIndex(skills: DiscoveredSkill[], projectRoot: string): string {
-  const segments: string[] = [
-    "[Skills Index]",
-    "IMPORTANT: Prefer retrieval-led reasoning over pre-training-led reasoning for any tasks covered by indexed skills.",
-  ];
+  const segments: string[] = [INDEX_HEADER, INDEX_INSTRUCTION];
 
   for (const skill of skills) {
     const skillPath = `./${relative(projectRoot, skill.path)}`;
