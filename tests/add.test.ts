@@ -46,7 +46,7 @@ describe("add", () => {
 
     const agentsMd = await readFile(join(testDir, "AGENTS.md"), "utf-8");
     expect(agentsMd).toContain("[react-patterns]");
-    expect(agentsMd).toContain("desc: React best practices");
+    expect(agentsMd).toContain("|desc:React best practices");
   });
 
   it("adds a skill to existing index", async () => {
@@ -64,8 +64,8 @@ describe("add", () => {
     const agentsMd = await readFile(join(testDir, "AGENTS.md"), "utf-8");
     expect(agentsMd).toContain("[skill-a]");
     expect(agentsMd).toContain("[skill-b]");
-    expect(agentsMd).toContain("desc: First skill");
-    expect(agentsMd).toContain("desc: Second skill");
+    expect(agentsMd).toContain("|desc:First skill");
+    expect(agentsMd).toContain("|desc:Second skill");
   });
 
   it("updates config with new skill", async () => {
@@ -130,10 +130,9 @@ describe("add", () => {
 
     const agentsMd = await readFile(join(testDir, "AGENTS.md"), "utf-8");
     expect(agentsMd).toContain("[complex-skill]");
-    expect(agentsMd).toContain("desc: Complex skill");
-    expect(agentsMd).toContain("guide.md");
-    expect(agentsMd).toContain("examples/hook.md");
-    expect(agentsMd).toContain("examples/pattern.md");
+    expect(agentsMd).toContain("|desc:Complex skill");
+    expect(agentsMd).toContain("|{guide.md}");
+    expect(agentsMd).toContain("|examples:{hook.md,pattern.md}");
   });
 
   it("correctly handles sequential adds", async () => {

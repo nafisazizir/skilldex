@@ -24,10 +24,9 @@ describe("generateIndex", () => {
     ];
 
     const result = generateIndex(skills, projectRoot);
-    expect(result).toContain("[react-patterns]");
-    expect(result).toContain("root: ./.agents/skills/react-patterns");
-    expect(result).toContain("desc: React best practices");
-    expect(result).toContain("hooks.md");
+    expect(result).toContain("[react-patterns]|root:./.agents/skills/react-patterns");
+    expect(result).toContain("|desc:React best practices");
+    expect(result).toContain("|{hooks.md}");
   });
 
   it("omits desc line when description is empty", () => {
@@ -41,10 +40,10 @@ describe("generateIndex", () => {
     ];
 
     const result = generateIndex(skills, projectRoot);
-    expect(result).not.toContain("desc:");
+    expect(result).not.toContain("|desc:");
   });
 
-  it("lists files with full relative paths", () => {
+  it("groups files by subdirectory", () => {
     const skills: DiscoveredSkill[] = [
       {
         name: "multi-dir",
@@ -59,9 +58,8 @@ describe("generateIndex", () => {
     ];
 
     const result = generateIndex(skills, projectRoot);
-    expect(result).toContain("root-file.md");
-    expect(result).toContain("patterns/hooks.md");
-    expect(result).toContain("patterns/state.md");
+    expect(result).toContain("|{root-file.md}");
+    expect(result).toContain("|patterns:{hooks.md,state.md}");
   });
 
   it("handles multiple skills", () => {
@@ -81,9 +79,9 @@ describe("generateIndex", () => {
     ];
 
     const result = generateIndex(skills, projectRoot);
-    expect(result).toContain("[skill-a]");
-    expect(result).toContain("[skill-b]");
-    expect(result).toContain("root: ./.agents/skills/skill-a");
-    expect(result).toContain("root: ./.agents/skills/skill-b");
+    expect(result).toContain("[skill-a]|root:./.agents/skills/skill-a");
+    expect(result).toContain("[skill-b]|root:./.agents/skills/skill-b");
+    expect(result).toContain("|desc:First");
+    expect(result).toContain("|desc:Second");
   });
 });
