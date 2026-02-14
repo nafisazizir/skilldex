@@ -39,6 +39,10 @@ export async function readConfig(projectRoot: string): Promise<Config> {
 
 export async function writeConfig(projectRoot: string, config: Config): Promise<void> {
   const configPath = join(projectRoot, CONFIG_FILENAME);
-  const content = JSON.stringify(config, null, 2);
+  const sorted = {
+    ...config,
+    skills: [...config.skills].sort((a, b) => a.name.localeCompare(b.name)),
+  };
+  const content = JSON.stringify(sorted, null, 2);
   await writeFile(configPath, content, "utf-8");
 }

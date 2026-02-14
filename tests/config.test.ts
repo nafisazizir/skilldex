@@ -109,6 +109,23 @@ describe("config", () => {
     expect(content).toContain("  ");
   });
 
+  it("sorts skills alphabetically by name when writing", async () => {
+    const testConfig: Config = {
+      version: 1,
+      target: "AGENTS.md",
+      skills: [
+        { name: "zulu", path: ".agents/skills/zulu" },
+        { name: "alpha", path: ".agents/skills/alpha" },
+        { name: "mike", path: ".agents/skills/mike" },
+      ],
+    };
+
+    await writeConfig(testDir, testConfig);
+
+    const readBack = await readConfig(testDir);
+    expect(readBack.skills.map((s) => s.name)).toEqual(["alpha", "mike", "zulu"]);
+  });
+
   it("can read config after multiple writes", async () => {
     const config1: Config = {
       version: 1,

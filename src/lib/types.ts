@@ -44,3 +44,11 @@ export interface AddResult {
   indexSize: number;
   agentsMdPath: string;
 }
+
+export interface RemoveResult {
+  skillName: string;
+  /** true if skill files were deleted from disk */
+  wasDeleted: boolean;
+  indexSize: number;
+  agentsMdPath: string;
+}

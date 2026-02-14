@@ -3,6 +3,7 @@ import { Command } from "commander";
 import pc from "picocolors";
 import { addSkill } from "../lib/add.js";
 import { initWithSkills } from "../lib/init.js";
+import { removeSkill } from "../lib/remove.js";
 import { scanForSkills } from "../lib/scanner.js";
 
 const program = new Command();
@@ -106,10 +107,56 @@ program
   });
 
 program
-  .command("remove")
+  .command("remove <skill>")
   .description("Remove a skill from the project")
-  .action(() => {
-    console.log("not yet implemented");
+  .option("--delete-files", "Delete skill files from disk")
+  .action(async (skillName: string, opts: { deleteFiles?: boolean }) => {
+    p.intro(pc.bgCyan(pc.black(" skilldex remove ")));
+
+    const projectRoot = process.cwd();
+    const s = p.spinner();
+
+    let deleteFiles = opts.deleteFiles ?? false;
+
+    if (!opts.deleteFiles) {
+      const shouldDelete = await p.confirm({
+        message: `Delete skill files from disk (.agents/skills/${skillName})?`,
+        initialValue: false,
+      });
+
+      if (p.isCancel(shouldDelete)) {
+        p.cancel("Remove cancelled.");
+        process.exit(0);
+      }
+
+      deleteFiles = shouldDelete;
+    }
+
+    try {
+      s.start("Removing skill...");
+      const result = await removeSkill(projectRoot, skillName, deleteFiles);
+      s.stop("✓ Skill removed");
+
+      const sizeKb = result.indexSize / 1024;
+      const sizeFormatted = `${sizeKb.toFixed(1)} KB`;
+      let sizeLabel: string;
+      if (sizeKb < 20) {
+        sizeLabel = pc.green(sizeFormatted);
+      } else if (sizeKb < 40) {
+        sizeLabel = pc.yellow(sizeFormatted);
+      } else {
+        sizeLabel = pc.red(`${sizeFormatted} — may degrade agent performance`);
+      }
+
+      p.log.info(`Context size: ${sizeLabel}`);
+      const suffix = result.wasDeleted ? " (files deleted)" : " (files kept on disk)";
+      p.outro(pc.green(`Removed "${result.skillName}"${suffix}`));
+    } catch (error) {
+      s.stop("✗ Failed");
+      const message = error instanceof Error ? error.message : String(error);
+      p.outro(pc.red(message));
+      process.exit(1);
+    }
   });
 
 program
