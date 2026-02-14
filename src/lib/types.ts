@@ -71,3 +71,12 @@ export interface ListResult {
   indexed: IndexedSkillInfo[];
   available: AvailableSkillInfo[];
 }
+
+export interface SyncResult {
+  /** Skills that were in config but missing from disk (removed) */
+  removed: string[];
+  /** Whether AGENTS.md content actually changed after regeneration */
+  changed: boolean;
+  indexSize: number;
+  agentsMdPath: string;
+}

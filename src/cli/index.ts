@@ -7,6 +7,7 @@ import { initWithSkills } from "../lib/init.js";
 import { listSkills } from "../lib/list.js";
 import { removeSkill } from "../lib/remove.js";
 import { scanForSkills } from "../lib/scanner.js";
+import { syncSkills } from "../lib/sync.js";
 import { handleCommandError, logContextSize, pluralize } from "./format.js";
 
 const program = new Command();
@@ -176,8 +177,33 @@ program
 program
   .command("sync")
   .description("Sync skills and regenerate AGENTS.md")
-  .action(() => {
-    console.log("not yet implemented");
+  .action(async () => {
+    p.intro(pc.bgCyan(pc.black(" skilldex sync ")));
+
+    const projectRoot = process.cwd();
+    const s = p.spinner();
+
+    try {
+      s.start("Syncing...");
+      const result = await syncSkills(projectRoot);
+      s.stop("✓ Sync complete");
+
+      if (result.removed.length > 0) {
+        for (const name of result.removed) {
+          p.log.warn(pc.red(`Removed stale skill "${name}" (missing from disk)`));
+        }
+      }
+
+      logContextSize(result.indexSize);
+
+      if (result.changed) {
+        p.outro(pc.green("Index updated"));
+      } else {
+        p.outro(pc.green("Everything up to date"));
+      }
+    } catch (error) {
+      handleCommandError(error, s);
+    }
   });
 
 program.parse();

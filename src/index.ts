@@ -20,6 +20,7 @@ export { init, initWithSkills } from "./lib/init.js";
 export { listSkills } from "./lib/list.js";
 export { removeSkill } from "./lib/remove.js";
 export { scanForSkills } from "./lib/scanner.js";
+export { syncSkills } from "./lib/sync.js";
 export type {
   AddResult,
   AvailableSkillInfo,
@@ -31,5 +32,6 @@ export type {
   RemoveResult,
   SkillEntry,
   SkillFile,
+  SyncResult,
 } from "./lib/types.js";
 export { buildManagedSection, regenerateFromConfig, writeAgentsMd } from "./lib/writer.js";
