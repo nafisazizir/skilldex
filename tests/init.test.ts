@@ -46,8 +46,8 @@ describe("init", () => {
     expect(content).toContain(START_TAG);
     expect(content).toContain("[react-patterns]");
     expect(content).toContain("[testing]");
-    expect(content).toContain("desc:React best practices");
-    expect(content).toContain("desc:Testing guidelines");
+    expect(content).toContain("desc: React best practices");
+    expect(content).toContain("desc: Testing guidelines");
   });
 
   it("filters to selected skills only", async () => {
