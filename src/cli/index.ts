@@ -156,17 +156,21 @@ program
 
           const selected = await p.select({
             message: `Multiple skills named "${skillName}" found. Which one?`,
-            options: matches.map((sk) => {
-              const indexed = indexedPaths.has(sk.relativePath);
-              const agent = getAgentDisplayName(sk.relativePath);
-              const hint = indexed ? "already indexed" : sk.relativePath;
-              return {
-                value: sk.relativePath,
-                label: agent ?? sk.relativePath,
-                hint,
-                disabled: indexed,
-              };
-            }),
+            options: matches
+              .map((sk) => {
+                const indexed = indexedPaths.has(sk.relativePath);
+                const agent = getAgentDisplayName(sk.relativePath);
+                return {
+                  value: sk.relativePath,
+                  label: agent ?? sk.relativePath,
+                  hint: indexed ? "already indexed" : sk.relativePath,
+                  disabled: indexed,
+                };
+              })
+              .sort((a, b) => {
+                if (a.disabled !== b.disabled) return a.disabled ? -1 : 1;
+                return a.label.localeCompare(b.label);
+              }),
           });
 
           if (p.isCancel(selected)) {
