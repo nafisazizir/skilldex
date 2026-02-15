@@ -121,6 +121,26 @@ describe("config", () => {
     expect(readBack.skills.map((s) => s.name)).toEqual(["alpha", "mike", "zulu"]);
   });
 
+  it("sorts same-named skills by path as tiebreaker", async () => {
+    const testDir = getDir();
+    const testConfig: Config = {
+      version: 1,
+      targets: [TARGET_FILE],
+      skills: [
+        { name: "react", path: ".cursor/skills/react" },
+        { name: "react", path: ".agents/skills/react" },
+      ],
+    };
+
+    await writeConfig(testDir, testConfig);
+
+    const readBack = await readConfig(testDir);
+    expect(readBack.skills.map((s) => s.path)).toEqual([
+      ".agents/skills/react",
+      ".cursor/skills/react",
+    ]);
+  });
+
   it("can read config after multiple writes", async () => {
     const testDir = getDir();
     const config1: Config = {

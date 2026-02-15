@@ -2,7 +2,8 @@ import * as p from "@clack/prompts";
 import { Command } from "commander";
 import pc from "picocolors";
 import { addSkill } from "../lib/add.js";
-import { SKILLS_DIR_SEGMENTS, TARGET_FILE } from "../lib/constants.js";
+import { readConfig } from "../lib/config.js";
+import { TARGET_FILE } from "../lib/constants.js";
 import { initWithSkills } from "../lib/init.js";
 import { listSkills } from "../lib/list.js";
 import { removeSkill } from "../lib/remove.js";
@@ -29,9 +30,7 @@ program
     const skills = await scanForSkills(projectRoot);
 
     if (skills.length === 0) {
-      p.outro(
-        pc.yellow(`No skills found. Add skill directories to ${SKILLS_DIR_SEGMENTS.join("/")}/`),
-      );
+      p.outro(pc.yellow("No skills found in any agent skills directory."));
       return;
     }
 
@@ -78,22 +77,29 @@ program
       }
     }
 
-    let selectedSkillNames: string[];
+    // Detect name collisions for hint display
+    const nameCount = new Map<string, number>();
+    for (const s of skills) {
+      nameCount.set(s.name, (nameCount.get(s.name) ?? 0) + 1);
+    }
+
+    let selectedSkillPaths: string[];
 
     if (opts.yes) {
       p.log.info(
         `Found ${skills.length} ${pluralize(skills.length, "skill", "skills")}, indexing all (--yes)`,
       );
-      selectedSkillNames = skills.map((s) => s.name);
+      selectedSkillPaths = skills.map((s) => s.relativePath);
     } else {
       const selected = await p.multiselect({
         message: "Select skills to index",
-        options: skills.map((s) => ({
-          value: s.name,
-          label: s.name,
-          hint: s.description || undefined,
-        })),
-        initialValues: skills.map((s) => s.name),
+        options: skills.map((s) => {
+          const relPath = s.relativePath;
+          const hasCollision = (nameCount.get(s.name) ?? 0) > 1;
+          const hint = hasCollision ? relPath : s.description || undefined;
+          return { value: relPath, label: s.name, hint };
+        }),
+        initialValues: skills.map((s) => s.relativePath),
         required: true,
       });
 
@@ -102,10 +108,10 @@ program
         process.exit(0);
       }
 
-      selectedSkillNames = selected;
+      selectedSkillPaths = selected;
     }
 
-    const selectedSkills = skills.filter((s) => selectedSkillNames.includes(s.name));
+    const selectedSkills = skills.filter((s) => selectedSkillPaths.includes(s.relativePath));
     const result = await initWithSkills(projectRoot, selectedSkills, targets);
 
     logContextSize(result.managedSize, result.targets);
@@ -126,8 +132,47 @@ program
     const s = p.spinner();
 
     try {
+      // Disambiguate name-based input before calling addSkill
+      let resolvedName = skillName;
+
+      if (!skillName.includes("/")) {
+        const allSkills = await scanForSkills(projectRoot);
+        const matches = allSkills.filter((sk) => sk.name === skillName);
+
+        if (matches.length > 1) {
+          const config = await readConfig(projectRoot);
+          const indexedPaths = new Set(config.skills.map((sk) => sk.path));
+          const available = matches.filter((sk) => !indexedPaths.has(sk.relativePath));
+
+          if (available.length === 0) {
+            p.outro(pc.yellow(`All skills named "${skillName}" are already indexed.`));
+            return;
+          }
+
+          const selected = await p.select({
+            message: `Multiple skills named "${skillName}" found. Which one?`,
+            options: matches.map((sk) => {
+              const indexed = indexedPaths.has(sk.relativePath);
+              return {
+                value: sk.relativePath,
+                label: sk.relativePath,
+                hint: indexed ? "already indexed" : undefined,
+                disabled: indexed,
+              };
+            }),
+          });
+
+          if (p.isCancel(selected)) {
+            p.cancel("Add cancelled.");
+            process.exit(0);
+          }
+
+          resolvedName = selected;
+        }
+      }
+
       s.start("Adding skill...");
-      const result = await addSkill(projectRoot, skillName);
+      const result = await addSkill(projectRoot, resolvedName);
       s.stop("✓ Skill added");
 
       logContextSize(result.managedSize, result.targets);
@@ -149,25 +194,50 @@ program
     const projectRoot = process.cwd();
     const s = p.spinner();
 
-    let deleteFiles = opts.deleteFiles ?? false;
+    try {
+      // Disambiguate name-based input before removing
+      let resolvedName = skillName;
 
-    if (!opts.deleteFiles) {
-      const shouldDelete = await p.confirm({
-        message: `Delete skill files from disk (${SKILLS_DIR_SEGMENTS.join("/")}/${skillName})?`,
-        initialValue: false,
-      });
+      if (!skillName.includes("/")) {
+        const config = await readConfig(projectRoot);
+        const matches = config.skills.filter((sk) => sk.name === skillName);
 
-      if (p.isCancel(shouldDelete)) {
-        p.cancel("Remove cancelled.");
-        process.exit(0);
+        if (matches.length > 1) {
+          const selected = await p.select({
+            message: `Multiple skills named "${skillName}" indexed. Which one?`,
+            options: matches.map((sk) => ({
+              value: sk.path,
+              label: sk.path,
+            })),
+          });
+
+          if (p.isCancel(selected)) {
+            p.cancel("Remove cancelled.");
+            process.exit(0);
+          }
+
+          resolvedName = selected;
+        }
       }
 
-      deleteFiles = shouldDelete;
-    }
+      let deleteFiles = opts.deleteFiles ?? false;
 
-    try {
+      if (!opts.deleteFiles) {
+        const shouldDelete = await p.confirm({
+          message: `Delete skill files from disk (${resolvedName})?`,
+          initialValue: false,
+        });
+
+        if (p.isCancel(shouldDelete)) {
+          p.cancel("Remove cancelled.");
+          process.exit(0);
+        }
+
+        deleteFiles = shouldDelete;
+      }
+
       s.start("Removing skill...");
-      const result = await removeSkill(projectRoot, skillName, deleteFiles);
+      const result = await removeSkill(projectRoot, resolvedName, deleteFiles);
       s.stop("✓ Skill removed");
 
       logContextSize(result.managedSize, result.targets);

@@ -12,6 +12,8 @@ export interface DiscoveredSkill {
   description: string;
   /** Absolute path to skill directory */
   path: string;
+  /** Relative path from project root, e.g. ".agents/skills/react-best-practices" */
+  relativePath: string;
   /** .md files in the skill (excluding SKILL.md) */
   files: SkillFile[];
 }

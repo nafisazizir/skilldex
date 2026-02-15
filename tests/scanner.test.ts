@@ -1,9 +1,9 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { SKILL_META_FILE, SKILLS_DIR_SEGMENTS } from "../src/lib/constants.js";
 import { scanForSkills } from "../src/lib/scanner.js";
-import { useTempDir } from "./helpers.js";
+import { createSkill, useTempDir } from "./helpers.js";
 
 describe("scanForSkills", () => {
   const { getDir } = useTempDir();
@@ -84,5 +84,86 @@ description: React best practices
     const skills = await scanForSkills(testDir);
     expect(skills[0].files).toHaveLength(1);
     expect(skills[0].files[0].name).toBe("guide");
+  });
+
+  it("discovers skills in agent-specific directories", async () => {
+    const testDir = getDir();
+    await createSkill(
+      testDir,
+      "cursor-skill",
+      "A Cursor skill",
+      ["guide.md"],
+      [".cursor", "skills"],
+    );
+
+    const skills = await scanForSkills(testDir);
+    expect(skills).toHaveLength(1);
+    expect(skills[0].name).toBe("cursor-skill");
+    expect(skills[0].description).toBe("A Cursor skill");
+    expect(skills[0].path).toBe(join(testDir, ".cursor", "skills", "cursor-skill"));
+  });
+
+  it("skips symlinked skill directories", async () => {
+    const testDir = getDir();
+    await createSkill(testDir, "my-skill", "Original", ["guide.md"]);
+
+    // Create a symlink in .cursor/skills/ pointing to the real skill
+    const cursorSkillsDir = join(testDir, ".cursor", "skills");
+    await mkdir(cursorSkillsDir, { recursive: true });
+    await symlink(
+      join(testDir, ...SKILLS_DIR_SEGMENTS, "my-skill"),
+      join(cursorSkillsDir, "my-skill"),
+    );
+
+    const skills = await scanForSkills(testDir);
+    expect(skills).toHaveLength(1);
+    expect(skills[0].name).toBe("my-skill");
+    // Should be the real path from .agents/skills, not the symlink
+    expect(skills[0].path).toBe(join(testDir, ...SKILLS_DIR_SEGMENTS, "my-skill"));
+  });
+
+  it("returns both skills when same name exists in different directories", async () => {
+    const testDir = getDir();
+    // Create same-named skill in both .agents/skills and .cursor/skills
+    await createSkill(testDir, "shared-skill", "Universal version", ["universal.md"]);
+    await createSkill(
+      testDir,
+      "shared-skill",
+      "Cursor version",
+      ["cursor.md"],
+      [".cursor", "skills"],
+    );
+
+    const skills = await scanForSkills(testDir);
+    expect(skills).toHaveLength(2);
+
+    const descriptions = skills.map((s) => s.description).sort();
+    expect(descriptions).toEqual(["Cursor version", "Universal version"]);
+
+    const paths = skills.map((s) => s.path).sort();
+    expect(paths).toEqual([
+      join(testDir, ...SKILLS_DIR_SEGMENTS, "shared-skill"),
+      join(testDir, ".cursor", "skills", "shared-skill"),
+    ]);
+  });
+
+  it("discovers skills across multiple agent directories", async () => {
+    const testDir = getDir();
+    await createSkill(testDir, "universal-skill", "Universal", ["guide.md"]);
+    await createSkill(testDir, "cursor-skill", "Cursor only", ["cursor.md"], [".cursor", "skills"]);
+    await createSkill(testDir, "claude-skill", "Claude only", ["claude.md"], [".claude", "skills"]);
+
+    const skills = await scanForSkills(testDir);
+    expect(skills).toHaveLength(3);
+
+    const names = skills.map((s) => s.name).sort();
+    expect(names).toEqual(["claude-skill", "cursor-skill", "universal-skill"]);
+  });
+
+  it("handles all agent directories missing gracefully", async () => {
+    const testDir = getDir();
+    // Empty project — no agent directories at all
+    const skills = await scanForSkills(testDir);
+    expect(skills).toEqual([]);
   });
 });

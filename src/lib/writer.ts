@@ -23,12 +23,12 @@ export function buildManagedSection(indexContent: string): string {
   return `${START_TAG}\n${indexContent}\n${END_TAG}`;
 }
 
-/** Write or update the managed skilldex section in a target file. Creates, appends, or replaces as needed. */
+/** Write or update the managed skilldex section in a target file. Creates, appends, or replaces as needed. Returns the written file content. */
 export async function writeTargetFile(
   projectRoot: string,
   indexContent: string,
   targetFile: string = TARGET_FILE,
-): Promise<void> {
+): Promise<string> {
   const targetPath = join(projectRoot, targetFile);
   const section = buildManagedSection(indexContent);
 
@@ -46,23 +46,31 @@ export async function writeTargetFile(
   }
 
   await writeFile(targetPath, output, "utf-8");
+  return output;
+}
+
+export interface RegenerateResult extends InitResult {
+  /** Map of target file path → written content */
+  writtenContent: Map<string, string>;
 }
 
 /** Regenerate all target files from config (reads config, scans indexed skills, writes targets). */
-export async function regenerateFromConfig(projectRoot: string): Promise<InitResult> {
+export async function regenerateFromConfig(projectRoot: string): Promise<RegenerateResult> {
   const config = await readConfig(projectRoot);
   const allSkills = await scanForSkills(projectRoot);
 
-  // Map skill names from config to DiscoveredSkill objects
-  const skillMap = new Map(allSkills.map((s) => [s.name, s]));
+  // Map skill paths from config to DiscoveredSkill objects
+  const skillMap = new Map(allSkills.map((s) => [s.relativePath, s]));
   const skills = config.skills
-    .map((entry) => skillMap.get(entry.name))
+    .map((entry) => skillMap.get(entry.path))
     .filter((s) => s !== undefined);
 
-  const index = generateIndex(skills, projectRoot);
+  const index = generateIndex(skills);
 
+  const writtenContent = new Map<string, string>();
   for (const target of config.targets) {
-    await writeTargetFile(projectRoot, index, target);
+    const content = await writeTargetFile(projectRoot, index, target);
+    writtenContent.set(join(projectRoot, target), content);
   }
 
   const managedSize = Buffer.byteLength(buildManagedSection(index));
@@ -72,5 +80,6 @@ export async function regenerateFromConfig(projectRoot: string): Promise<InitRes
     skillCount: skills.length,
     managedSize,
     targets,
+    writtenContent,
   };
 }

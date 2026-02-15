@@ -1,4 +1,4 @@
-import { dirname, relative } from "node:path";
+import { dirname } from "node:path";
 import { INDEX_HEADER, INDEX_INSTRUCTION } from "./constants.js";
 import type { DiscoveredSkill } from "./types.js";
 
@@ -19,13 +19,12 @@ function groupFilesBySubdir(
   return groups;
 }
 
-export function generateIndex(skills: DiscoveredSkill[], projectRoot: string): string {
+export function generateIndex(skills: DiscoveredSkill[]): string {
   const segments: string[] = [INDEX_HEADER, INDEX_INSTRUCTION];
 
   for (const skill of skills) {
-    const skillPath = `./${relative(projectRoot, skill.path)}`;
     segments.push(`[${skill.name}]`);
-    segments.push(`root:${skillPath}`);
+    segments.push(`root:./${skill.relativePath}`);
 
     if (skill.description) {
       segments.push(`desc:${skill.description}`);

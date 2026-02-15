@@ -44,6 +44,10 @@ tests/              # Test files (vitest)
 - Biome for formatting (2-space indent, 100 char line width) and linting
 - vitest for all tests
 
+## Reference Projects
+
+- **Vercel Skills CLI:** https://github.com/vercel-labs/skills — The open agent skills tool (`npx skills`). Supports 35+ agents with per-agent directory conventions. Key reference for multi-agent directory structures and skill format (SKILL.md). Skilldex complements this — they handle skill *installation*, we handle skill *indexing* into passive context.
+
 ## Dev Notes
 
 Private dev notes (gitignored) are in `.dev/`:

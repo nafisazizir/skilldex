@@ -141,6 +141,35 @@ describe("remove", () => {
     });
   });
 
+  it("throws error when same name is indexed in multiple directories", async () => {
+    const testDir = getDir();
+    await createSkill(testDir, "react", "Universal version", ["guide.md"]);
+    await createSkill(testDir, "react", "Cursor version", ["cursor.md"], [".cursor", "skills"]);
+
+    await addSkill(testDir, ".agents/skills/react");
+    await addSkill(testDir, ".cursor/skills/react");
+
+    await expect(removeSkill(testDir, "react")).rejects.toThrow(
+      'Multiple skills named "react" indexed. Specify the path:',
+    );
+  });
+
+  it("removes skill by path for disambiguation", async () => {
+    const testDir = getDir();
+    await createSkill(testDir, "react", "Universal version", ["guide.md"]);
+    await createSkill(testDir, "react", "Cursor version", ["cursor.md"], [".cursor", "skills"]);
+
+    await addSkill(testDir, ".agents/skills/react");
+    await addSkill(testDir, ".cursor/skills/react");
+
+    const result = await removeSkill(testDir, ".cursor/skills/react");
+
+    expect(result.skillName).toBe("react");
+    const config = await readConfig(testDir);
+    expect(config.skills).toHaveLength(1);
+    expect(config.skills[0].path).toBe(".agents/skills/react");
+  });
+
   it("handles removing last skill (empty index)", async () => {
     const testDir = getDir();
     await createSkill(testDir, "only-skill", "The only one", ["guide.md"]);

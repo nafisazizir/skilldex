@@ -1,7 +1,8 @@
 import type { Dirent } from "node:fs";
-import { readdir, readFile } from "node:fs/promises";
+import { lstat, readdir, readFile } from "node:fs/promises";
 import { join, relative } from "node:path";
-import { SKILL_META_FILE, skillsDir } from "./constants.js";
+import { getUniqueSkillsDirs } from "./agents.js";
+import { compareByNameThenPath, SKILL_META_FILE } from "./constants.js";
 import type { DiscoveredSkill, SkillFile } from "./types.js";
 
 /** Extract key-value pairs from YAML frontmatter (between `---` fences). */
@@ -58,9 +59,17 @@ async function collectMdFiles(dir: string, skillRoot: string): Promise<SkillFile
   return files;
 }
 
-/** Scan for skills in the project's `.agents/skills/` directory. */
-export async function scanForSkills(projectRoot: string): Promise<DiscoveredSkill[]> {
-  const dir = skillsDir(projectRoot);
+async function isSymlink(path: string): Promise<boolean> {
+  try {
+    const stats = await lstat(path);
+    return stats.isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+
+/** Scan a single skills directory and return discovered skills. */
+async function scanDirectory(dir: string, projectRoot: string): Promise<DiscoveredSkill[]> {
   const entries = await safeReaddir(dir);
   const skills: DiscoveredSkill[] = [];
 
@@ -68,8 +77,10 @@ export async function scanForSkills(projectRoot: string): Promise<DiscoveredSkil
     if (!entry.isDirectory()) continue;
 
     const skillPath = join(dir, entry.name);
-    let description = "";
 
+    if (await isSymlink(skillPath)) continue;
+
+    let description = "";
     const skillMd = await safeReadFile(join(skillPath, SKILL_META_FILE));
     if (skillMd !== undefined) {
       const frontmatter = parseFrontmatter(skillMd);
@@ -81,8 +92,17 @@ export async function scanForSkills(projectRoot: string): Promise<DiscoveredSkil
       name: entry.name,
       description,
       path: skillPath,
+      relativePath: relative(projectRoot, skillPath),
       files,
     });
   }
   return skills;
+}
+
+/** Scan all agent source directories for skills. Same-named skills in different directories are all included. */
+export async function scanForSkills(projectRoot: string): Promise<DiscoveredSkill[]> {
+  const results = await Promise.all(
+    getUniqueSkillsDirs().map((d) => scanDirectory(join(projectRoot, d), projectRoot)),
+  );
+  return results.flat().sort(compareByNameThenPath);
 }

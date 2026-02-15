@@ -19,14 +19,16 @@ export function useTempDir(): { getDir: () => string } {
 /**
  * Create a skill directory with SKILL.md frontmatter and content files for testing.
  * Accepts `string[]` for simple filenames or `Record<string, string>` for filename→content pairs.
+ * Optional `skillsDirSegments` overrides the default `.agents/skills` directory.
  */
 export async function createSkill(
   testDir: string,
   name: string,
   description: string,
   files: string[] | Record<string, string>,
+  skillsDirSegments: readonly string[] = SKILLS_DIR_SEGMENTS,
 ): Promise<void> {
-  const skillDir = join(testDir, ...SKILLS_DIR_SEGMENTS, name);
+  const skillDir = join(testDir, ...skillsDirSegments, name);
   await mkdir(skillDir, { recursive: true });
 
   if (description) {

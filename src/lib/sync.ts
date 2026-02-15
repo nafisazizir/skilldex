@@ -7,15 +7,15 @@ import { regenerateFromConfig } from "./writer.js";
 export async function syncSkills(projectRoot: string): Promise<SyncResult> {
   const config = await readConfig(projectRoot);
   const onDisk = await scanForSkills(projectRoot);
-  const diskNames = new Set(onDisk.map((s) => s.name));
+  const diskPaths = new Set(onDisk.map((s) => s.relativePath));
 
   // Find stale entries: in config but not on disk
-  const stale = config.skills.filter((s) => !diskNames.has(s.name));
+  const stale = config.skills.filter((s) => !diskPaths.has(s.path));
   const removed = stale.map((s) => s.name);
 
   if (stale.length > 0) {
-    const staleNames = new Set(removed);
-    config.skills = config.skills.filter((s) => !staleNames.has(s.name));
+    const stalePaths = new Set(stale.map((s) => s.path));
+    config.skills = config.skills.filter((s) => !stalePaths.has(s.path));
     await writeConfig(projectRoot, config);
   }
 
@@ -34,10 +34,10 @@ export async function syncSkills(projectRoot: string): Promise<SyncResult> {
 
   const result = await regenerateFromConfig(projectRoot);
 
-  // Check if ANY target changed
+  // Check if ANY target changed using the written content from regeneration
   let changed = false;
   for (const targetPath of targetPaths) {
-    const after = await safeReadFile(targetPath);
+    const after = result.writtenContent.get(targetPath);
     if (beforeMap.get(targetPath) !== after) {
       changed = true;
       break;

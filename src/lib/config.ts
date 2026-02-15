@@ -1,6 +1,6 @@
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { CONFIG_FILENAME, TARGET_FILE } from "./constants.js";
+import { CONFIG_FILENAME, compareByNameThenPath, TARGET_FILE } from "./constants.js";
 import { safeReadFile } from "./scanner.js";
 import type { Config } from "./types.js";
 
@@ -40,7 +40,7 @@ export async function writeConfig(projectRoot: string, config: Config): Promise<
   const configPath = join(projectRoot, CONFIG_FILENAME);
   const sorted = {
     ...config,
-    skills: [...config.skills].sort((a, b) => a.name.localeCompare(b.name)),
+    skills: [...config.skills].sort(compareByNameThenPath),
   };
   const content = JSON.stringify(sorted, null, 2);
   await writeFile(configPath, content, "utf-8");

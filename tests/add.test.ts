@@ -62,14 +62,69 @@ describe("add", () => {
     await addSkill(testDir, "duplicate-skill");
 
     await expect(addSkill(testDir, "duplicate-skill")).rejects.toThrow(
-      'Skill "duplicate-skill" is already indexed',
+      'Skill ".agents/skills/duplicate-skill" is already indexed',
     );
+  });
+
+  it("throws error when same name exists in multiple directories", async () => {
+    const testDir = getDir();
+    await createSkill(testDir, "react", "Universal version", ["guide.md"]);
+    await createSkill(testDir, "react", "Cursor version", ["cursor.md"], [".cursor", "skills"]);
+
+    await expect(addSkill(testDir, "react")).rejects.toThrow(
+      'Multiple skills named "react" found. Specify the path:',
+    );
+  });
+
+  it("adds skill by path for disambiguation", async () => {
+    const testDir = getDir();
+    await createSkill(testDir, "react", "Universal version", ["guide.md"]);
+    await createSkill(testDir, "react", "Cursor version", ["cursor.md"], [".cursor", "skills"]);
+
+    const result = await addSkill(testDir, ".cursor/skills/react");
+
+    expect(result.skillName).toBe("react");
+    const config = await readConfig(testDir);
+    expect(config.skills).toHaveLength(1);
+    expect(config.skills[0].path).toBe(".cursor/skills/react");
+  });
+
+  it("adds same-named skills from different directories", async () => {
+    const testDir = getDir();
+    await createSkill(testDir, "react", "Universal version", ["guide.md"]);
+    await createSkill(testDir, "react", "Cursor version", ["cursor.md"], [".cursor", "skills"]);
+
+    await addSkill(testDir, ".agents/skills/react");
+    await addSkill(testDir, ".cursor/skills/react");
+
+    const config = await readConfig(testDir);
+    expect(config.skills).toHaveLength(2);
+    expect(config.skills.map((s) => s.path)).toEqual([
+      ".agents/skills/react",
+      ".cursor/skills/react",
+    ]);
   });
 
   it("throws error when skill does not exist", async () => {
     await expect(addSkill(getDir(), "nonexistent-skill")).rejects.toThrow(
-      /Skill "nonexistent-skill" not found/,
+      'Skill "nonexistent-skill" not found. Did you create the skill directory?',
     );
+  });
+
+  it("stores agent-specific path when skill is in a non-default directory", async () => {
+    const testDir = getDir();
+    await createSkill(
+      testDir,
+      "cursor-skill",
+      "Cursor-specific skill",
+      ["guide.md"],
+      [".cursor", "skills"],
+    );
+
+    await addSkill(testDir, "cursor-skill");
+
+    const config = await readConfig(testDir);
+    expect(config.skills[0].path).toBe(".cursor/skills/cursor-skill");
   });
 
   it("preserves existing AGENTS.md content outside managed section", async () => {
