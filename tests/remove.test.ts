@@ -40,7 +40,7 @@ describe("remove", () => {
 
     expect(result.skillName).toBe("my-skill");
     expect(result.wasDeleted).toBe(false);
-    expect(result.indexSize).toBeGreaterThan(0);
+    expect(result.managedSize).toBeGreaterThan(0);
 
     const config = await readConfig(testDir);
     expect(config.skills).toHaveLength(0);
@@ -136,8 +136,14 @@ describe("remove", () => {
     expect(result).toEqual({
       skillName: "my-skill",
       wasDeleted: false,
-      indexSize: expect.any(Number),
-      agentsMdPath: join(testDir, TARGET_FILE),
+      managedSize: expect.any(Number),
+      targets: [
+        {
+          file: TARGET_FILE,
+          path: join(testDir, TARGET_FILE),
+          totalSize: expect.any(Number),
+        },
+      ],
     });
   });
 
@@ -154,6 +160,6 @@ describe("remove", () => {
     expect(agentsMd).toContain(START_TAG);
     expect(agentsMd).toContain(END_TAG);
     expect(agentsMd).not.toContain("[only-skill]");
-    expect(result.indexSize).toBeGreaterThan(0);
+    expect(result.managedSize).toBeGreaterThan(0);
   });
 });

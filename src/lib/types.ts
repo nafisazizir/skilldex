@@ -16,12 +16,21 @@ export interface DiscoveredSkill {
   files: SkillFile[];
 }
 
+export interface TargetFileInfo {
+  /** Target filename (e.g. "AGENTS.md") */
+  file: string;
+  /** Absolute path */
+  path: string;
+  /** Total file size in bytes */
+  totalSize: number;
+}
+
 export interface InitResult {
   skillCount: number;
-  /** Size of AGENTS.md in bytes */
-  indexSize: number;
-  /** Absolute path to the written AGENTS.md */
-  agentsMdPath: string;
+  /** Size of the managed section in bytes */
+  managedSize: number;
+  /** Per-target file details */
+  targets: TargetFileInfo[];
 }
 
 export interface SkillEntry {
@@ -33,24 +42,24 @@ export interface SkillEntry {
 
 export interface Config {
   version: 1;
-  /** Which file to write to (e.g., "AGENTS.md") */
-  target: string;
+  /** Which files to write the index to (e.g., ["AGENTS.md", "CLAUDE.md"]) */
+  targets: string[];
   /** List of indexed skills */
   skills: SkillEntry[];
 }
 
 export interface AddResult {
   skillName: string;
-  indexSize: number;
-  agentsMdPath: string;
+  managedSize: number;
+  targets: TargetFileInfo[];
 }
 
 export interface RemoveResult {
   skillName: string;
   /** true if skill files were deleted from disk */
   wasDeleted: boolean;
-  indexSize: number;
-  agentsMdPath: string;
+  managedSize: number;
+  targets: TargetFileInfo[];
 }
 
 export interface IndexedSkillInfo {
@@ -75,8 +84,8 @@ export interface ListResult {
 export interface SyncResult {
   /** Skills that were in config but missing from disk (removed) */
   removed: string[];
-  /** Whether AGENTS.md content actually changed after regeneration */
+  /** Whether any target file content actually changed after regeneration */
   changed: boolean;
-  indexSize: number;
-  agentsMdPath: string;
+  managedSize: number;
+  targets: TargetFileInfo[];
 }

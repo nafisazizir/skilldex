@@ -1,21 +1,25 @@
 import { stat, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { readConfig } from "./config.js";
 import { END_TAG, START_TAG, TARGET_FILE } from "./constants.js";
 import { generateIndex } from "./indexer.js";
 import { safeReadFile, scanForSkills } from "./scanner.js";
-import type { InitResult } from "./types.js";
+import type { InitResult, TargetFileInfo } from "./types.js";
 
 export function buildManagedSection(indexContent: string): string {
   return `${START_TAG}\n${indexContent}\n${END_TAG}`;
 }
 
-/** Write or update the managed skilldex section in AGENTS.md. Creates, appends, or replaces as needed. */
-export async function writeAgentsMd(projectRoot: string, indexContent: string): Promise<void> {
-  const agentsMdPath = join(projectRoot, TARGET_FILE);
+/** Write or update the managed skilldex section in a target file. Creates, appends, or replaces as needed. */
+export async function writeTargetFile(
+  projectRoot: string,
+  indexContent: string,
+  targetFile: string = TARGET_FILE,
+): Promise<void> {
+  const targetPath = join(projectRoot, targetFile);
   const section = buildManagedSection(indexContent);
 
-  const existing = await safeReadFile(agentsMdPath);
+  const existing = await safeReadFile(targetPath);
 
   let output: string;
   if (existing === undefined) {
@@ -28,10 +32,10 @@ export async function writeAgentsMd(projectRoot: string, indexContent: string): 
     output = `${existing.trimEnd()}\n\n${section}\n`;
   }
 
-  await writeFile(agentsMdPath, output, "utf-8");
+  await writeFile(targetPath, output, "utf-8");
 }
 
-/** Regenerate AGENTS.md from config (reads config, scans indexed skills, writes AGENTS.md). */
+/** Regenerate all target files from config (reads config, scans indexed skills, writes targets). */
 export async function regenerateFromConfig(projectRoot: string): Promise<InitResult> {
   const config = await readConfig(projectRoot);
   const allSkills = await scanForSkills(projectRoot);
@@ -43,14 +47,23 @@ export async function regenerateFromConfig(projectRoot: string): Promise<InitRes
     .filter((s) => s !== undefined);
 
   const index = generateIndex(skills, projectRoot);
-  await writeAgentsMd(projectRoot, index);
 
-  const agentsMdPath = join(projectRoot, TARGET_FILE);
-  const statsResult = await stat(agentsMdPath);
+  for (const target of config.targets) {
+    await writeTargetFile(projectRoot, index, target);
+  }
+
+  const managedSize = Buffer.byteLength(buildManagedSection(index));
+  const targets: TargetFileInfo[] = await Promise.all(
+    config.targets.map(async (t) => {
+      const p = join(projectRoot, t);
+      const s = await stat(p);
+      return { file: basename(t), path: p, totalSize: s.size };
+    }),
+  );
 
   return {
     skillCount: skills.length,
-    indexSize: statsResult.size,
-    agentsMdPath,
+    managedSize,
+    targets,
   };
 }

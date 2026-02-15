@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { readConfig, writeConfig } from "../src/lib/config.js";
 import { END_TAG, SKILLS_DIR_SEGMENTS, START_TAG, TARGET_FILE } from "../src/lib/constants.js";
+import { initWithSkills } from "../src/lib/init.js";
+import { scanForSkills } from "../src/lib/scanner.js";
 import { syncSkills } from "../src/lib/sync.js";
 import { createSkill } from "./helpers.js";
 
@@ -43,8 +45,8 @@ describe("sync", () => {
 
     expect(result.changed).toBe(false);
     expect(result.removed).toEqual([]);
-    expect(result.indexSize).toBeGreaterThan(0);
-    expect(result.agentsMdPath).toBe(join(testDir, TARGET_FILE));
+    expect(result.managedSize).toBeGreaterThan(0);
+    expect(result.targets.map((t) => t.path)).toEqual([join(testDir, TARGET_FILE)]);
   });
 
   it("detects changes after modifying a skill file", async () => {
@@ -164,11 +166,61 @@ describe("sync", () => {
 
     expect(result).toHaveProperty("removed");
     expect(result).toHaveProperty("changed");
-    expect(result).toHaveProperty("indexSize");
-    expect(result).toHaveProperty("agentsMdPath");
+    expect(result).toHaveProperty("managedSize");
+    expect(result).toHaveProperty("targets");
     expect(Array.isArray(result.removed)).toBe(true);
     expect(typeof result.changed).toBe("boolean");
-    expect(typeof result.indexSize).toBe("number");
-    expect(typeof result.agentsMdPath).toBe("string");
+    expect(typeof result.managedSize).toBe("number");
+    expect(Array.isArray(result.targets)).toBe(true);
+    expect(result.targets[0]).toHaveProperty("file");
+    expect(result.targets[0]).toHaveProperty("path");
+    expect(result.targets[0]).toHaveProperty("totalSize");
+  });
+
+  it("syncs using custom target files from config", async () => {
+    await createSkill(testDir, "my-skill", "A skill", ["guide.md"]);
+
+    // Init with custom target
+    const skills = await scanForSkills(testDir);
+    await initWithSkills(testDir, skills, ["CLAUDE.md"]);
+
+    // Modify the skill
+    const skillMdPath = join(testDir, ...SKILLS_DIR_SEGMENTS, "my-skill", "SKILL.md");
+    await writeFile(skillMdPath, "---\ndescription: Updated description\n---\n");
+
+    const result = await syncSkills(testDir);
+
+    expect(result.changed).toBe(true);
+    expect(result.targets.map((t) => t.path)).toEqual([join(testDir, "CLAUDE.md")]);
+
+    const content = await readFile(join(testDir, "CLAUDE.md"), "utf-8");
+    expect(content).toContain(START_TAG);
+    expect(content).toContain("Updated description");
+  });
+
+  it("detects changes across multiple targets", async () => {
+    await createSkill(testDir, "my-skill", "A skill", ["guide.md"]);
+
+    // Init with multiple targets
+    const skills = await scanForSkills(testDir);
+    await initWithSkills(testDir, skills, ["AGENTS.md", "CLAUDE.md"]);
+
+    // Modify the skill
+    const skillMdPath = join(testDir, ...SKILLS_DIR_SEGMENTS, "my-skill", "SKILL.md");
+    await writeFile(skillMdPath, "---\ndescription: Updated description\n---\n");
+
+    const result = await syncSkills(testDir);
+
+    expect(result.changed).toBe(true);
+    expect(result.targets.map((t) => t.path)).toEqual([
+      join(testDir, "AGENTS.md"),
+      join(testDir, "CLAUDE.md"),
+    ]);
+
+    // Both files should have updated content
+    for (const target of ["AGENTS.md", "CLAUDE.md"]) {
+      const content = await readFile(join(testDir, target), "utf-8");
+      expect(content).toContain("Updated description");
+    }
   });
 });

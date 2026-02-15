@@ -32,7 +32,7 @@ export async function addSkill(projectRoot: string, skillName: string): Promise<
 
   return {
     skillName,
-    indexSize: result.indexSize,
-    agentsMdPath: result.agentsMdPath,
+    managedSize: result.managedSize,
+    targets: result.targets,
   };
 }

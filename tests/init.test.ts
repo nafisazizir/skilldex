@@ -2,8 +2,10 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { readConfig } from "../src/lib/config.js";
 import { START_TAG, TARGET_FILE } from "../src/lib/constants.js";
-import { init } from "../src/lib/init.js";
+import { init, initWithSkills } from "../src/lib/init.js";
+import { scanForSkills } from "../src/lib/scanner.js";
 import { createSkill } from "./helpers.js";
 
 describe("init", () => {
@@ -25,8 +27,11 @@ describe("init", () => {
     const result = await init({ projectRoot: testDir, yes: true });
 
     expect(result.skillCount).toBe(2);
-    expect(result.indexSize).toBeGreaterThan(0);
-    expect(result.agentsMdPath).toBe(join(testDir, TARGET_FILE));
+    expect(result.managedSize).toBeGreaterThan(0);
+    expect(result.targets).toHaveLength(1);
+    expect(result.targets[0].file).toBe(TARGET_FILE);
+    expect(result.targets[0].path).toBe(join(testDir, TARGET_FILE));
+    expect(result.targets[0].totalSize).toBeGreaterThan(0);
 
     const content = await readFile(join(testDir, TARGET_FILE), "utf-8");
     expect(content).toContain(START_TAG);
@@ -71,5 +76,42 @@ describe("init", () => {
     expect(content).toContain("# My Project Config");
     expect(content).toContain("Custom content.");
     expect(content).toContain("[my-skill]");
+  });
+
+  it("writes to custom target file when specified", async () => {
+    await createSkill(testDir, "my-skill", "A skill", ["guide.md"]);
+
+    const skills = await scanForSkills(testDir);
+    const result = await initWithSkills(testDir, skills, ["CLAUDE.md"]);
+
+    expect(result.targets.map((t) => t.path)).toEqual([join(testDir, "CLAUDE.md")]);
+
+    const content = await readFile(join(testDir, "CLAUDE.md"), "utf-8");
+    expect(content).toContain(START_TAG);
+    expect(content).toContain("[my-skill]");
+
+    const config = await readConfig(testDir);
+    expect(config.targets).toEqual(["CLAUDE.md"]);
+  });
+
+  it("writes to multiple targets simultaneously", async () => {
+    await createSkill(testDir, "my-skill", "A skill", ["guide.md"]);
+
+    const skills = await scanForSkills(testDir);
+    const result = await initWithSkills(testDir, skills, ["AGENTS.md", "CLAUDE.md"]);
+
+    expect(result.targets.map((t) => t.path)).toEqual([
+      join(testDir, "AGENTS.md"),
+      join(testDir, "CLAUDE.md"),
+    ]);
+
+    for (const target of ["AGENTS.md", "CLAUDE.md"]) {
+      const content = await readFile(join(testDir, target), "utf-8");
+      expect(content).toContain(START_TAG);
+      expect(content).toContain("[my-skill]");
+    }
+
+    const config = await readConfig(testDir);
+    expect(config.targets).toEqual(["AGENTS.md", "CLAUDE.md"]);
   });
 });

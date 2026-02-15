@@ -1,6 +1,5 @@
 import { join } from "node:path";
 import { readConfig, writeConfig } from "./config.js";
-import { TARGET_FILE } from "./constants.js";
 import { safeReadFile, scanForSkills } from "./scanner.js";
 import type { SyncResult } from "./types.js";
 import { regenerateFromConfig } from "./writer.js";
@@ -20,23 +19,35 @@ export async function syncSkills(projectRoot: string): Promise<SyncResult> {
     await writeConfig(projectRoot, config);
   }
 
-  const agentsMdPath = join(projectRoot, TARGET_FILE);
-  const before = await safeReadFile(agentsMdPath);
+  const targetPaths = config.targets.map((t) => join(projectRoot, t));
 
-  // Nothing to do if no skills indexed and no AGENTS.md exists
-  if (config.skills.length === 0 && before === undefined) {
-    return { removed, changed: false, indexSize: 0, agentsMdPath };
+  // Read before-state for all targets
+  const beforeMap = new Map<string, string | undefined>();
+  for (const targetPath of targetPaths) {
+    beforeMap.set(targetPath, await safeReadFile(targetPath));
+  }
+
+  // Nothing to do if no skills indexed and no target files exist
+  if (config.skills.length === 0 && [...beforeMap.values()].every((v) => v === undefined)) {
+    return { removed, changed: false, managedSize: 0, targets: [] };
   }
 
   const result = await regenerateFromConfig(projectRoot);
 
-  const after = await safeReadFile(agentsMdPath);
-  const changed = before !== after;
+  // Check if ANY target changed
+  let changed = false;
+  for (const targetPath of targetPaths) {
+    const after = await safeReadFile(targetPath);
+    if (beforeMap.get(targetPath) !== after) {
+      changed = true;
+      break;
+    }
+  }
 
   return {
     removed,
     changed,
-    indexSize: result.indexSize,
-    agentsMdPath: result.agentsMdPath,
+    managedSize: result.managedSize,
+    targets: result.targets,
   };
 }

@@ -21,7 +21,8 @@ program
   .command("init")
   .description("Initialize skilldex in the current project")
   .option("-y, --yes", "Skip prompts and index all discovered skills")
-  .action(async (opts: { yes?: boolean }) => {
+  .option("-t, --target <files...>", "Target file(s) to write index to")
+  .action(async (opts: { yes?: boolean; target?: string[] }) => {
     p.intro(pc.bgCyan(pc.black(" skilldex init ")));
 
     const projectRoot = process.cwd();
@@ -32,6 +33,49 @@ program
         pc.yellow(`No skills found. Add skill directories to ${SKILLS_DIR_SEGMENTS.join("/")}/`),
       );
       return;
+    }
+
+    // Determine target files
+    let targets: string[];
+    if (opts.target) {
+      targets = opts.target;
+    } else if (opts.yes) {
+      targets = [TARGET_FILE];
+    } else {
+      const selected = await p.multiselect({
+        message: "Select target file(s)",
+        options: [
+          { value: "AGENTS.md", label: "AGENTS.md", hint: "default" },
+          { value: "CLAUDE.md", label: "CLAUDE.md" },
+          { value: "__custom__", label: "Custom..." },
+        ],
+        initialValues: ["AGENTS.md"],
+        required: true,
+      });
+
+      if (p.isCancel(selected)) {
+        p.cancel("Init cancelled.");
+        process.exit(0);
+      }
+
+      targets = selected.filter((v) => v !== "__custom__");
+
+      if (selected.includes("__custom__")) {
+        const custom = await p.text({
+          message: "Enter target filename",
+          placeholder: "AGENTS.md",
+          validate: (value) => {
+            if (!value?.trim()) return "Filename is required";
+          },
+        });
+
+        if (p.isCancel(custom)) {
+          p.cancel("Init cancelled.");
+          process.exit(0);
+        }
+
+        targets.push(custom);
+      }
     }
 
     let selectedSkillNames: string[];
@@ -62,12 +106,12 @@ program
     }
 
     const selectedSkills = skills.filter((s) => selectedSkillNames.includes(s.name));
-    const result = await initWithSkills(projectRoot, selectedSkills);
+    const result = await initWithSkills(projectRoot, selectedSkills, targets);
 
-    logContextSize(result.indexSize);
+    logContextSize(result.managedSize, result.targets);
     p.outro(
       pc.green(
-        `Indexed ${result.skillCount} ${pluralize(result.skillCount, "skill", "skills")} into ${TARGET_FILE}`,
+        `Indexed ${result.skillCount} ${pluralize(result.skillCount, "skill", "skills")} into ${result.targets.map((t) => t.file).join(", ")}`,
       ),
     );
   });
@@ -86,8 +130,10 @@ program
       const result = await addSkill(projectRoot, skillName);
       s.stop("✓ Skill added");
 
-      logContextSize(result.indexSize);
-      p.outro(pc.green(`Added "${result.skillName}" to ${TARGET_FILE}`));
+      logContextSize(result.managedSize, result.targets);
+      p.outro(
+        pc.green(`Added "${result.skillName}" to ${result.targets.map((t) => t.file).join(", ")}`),
+      );
     } catch (error) {
       handleCommandError(error, s);
     }
@@ -124,7 +170,7 @@ program
       const result = await removeSkill(projectRoot, skillName, deleteFiles);
       s.stop("✓ Skill removed");
 
-      logContextSize(result.indexSize);
+      logContextSize(result.managedSize, result.targets);
       const suffix = result.wasDeleted ? " (files deleted)" : " (files kept on disk)";
       p.outro(pc.green(`Removed "${result.skillName}"${suffix}`));
     } catch (error) {
@@ -168,15 +214,8 @@ program
   });
 
 program
-  .command("browse")
-  .description("Browse available skills")
-  .action(() => {
-    console.log("not yet implemented");
-  });
-
-program
   .command("sync")
-  .description("Sync skills and regenerate AGENTS.md")
+  .description("Sync skills and regenerate target file")
   .action(async () => {
     p.intro(pc.bgCyan(pc.black(" skilldex sync ")));
 
@@ -194,7 +233,7 @@ program
         }
       }
 
-      logContextSize(result.indexSize);
+      logContextSize(result.managedSize, result.targets);
 
       if (result.changed) {
         p.outro(pc.green("Index updated"));

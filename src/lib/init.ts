@@ -1,13 +1,13 @@
 import { stat } from "node:fs/promises";
-import { join, relative } from "node:path";
+import { basename, join, relative } from "node:path";
 import { writeConfig } from "./config.js";
 import { TARGET_FILE } from "./constants.js";
 import { generateIndex } from "./indexer.js";
 import { scanForSkills } from "./scanner.js";
-import type { DiscoveredSkill, InitResult } from "./types.js";
-import { writeAgentsMd } from "./writer.js";
+import type { DiscoveredSkill, InitResult, TargetFileInfo } from "./types.js";
+import { buildManagedSection, writeTargetFile } from "./writer.js";
 
-/** Scan for skills, filter by selection, and write the index to AGENTS.md. */
+/** Scan for skills, filter by selection, and write the index to target files. */
 export async function init(options: {
   projectRoot: string;
   selectedSkills?: string[];
@@ -28,18 +28,22 @@ export async function init(options: {
   return initWithSkills(projectRoot, skills);
 }
 
-/** Index a specific set of skills and write AGENTS.md. */
+/** Index a specific set of skills and write to target file(s). */
 export async function initWithSkills(
   projectRoot: string,
   skills: DiscoveredSkill[],
+  targets: string[] = [TARGET_FILE],
 ): Promise<InitResult> {
   const index = generateIndex(skills, projectRoot);
-  await writeAgentsMd(projectRoot, index);
+
+  for (const target of targets) {
+    await writeTargetFile(projectRoot, index, target);
+  }
 
   // Update config file with indexed skills
   const config = {
     version: 1 as const,
-    target: TARGET_FILE,
+    targets,
     skills: skills.map((skill) => ({
       name: skill.name,
       path: relative(projectRoot, skill.path),
@@ -47,12 +51,18 @@ export async function initWithSkills(
   };
   await writeConfig(projectRoot, config);
 
-  const agentsMdPath = join(projectRoot, TARGET_FILE);
-  const stats = await stat(agentsMdPath);
+  const managedSize = Buffer.byteLength(buildManagedSection(index));
+  const targetInfos: TargetFileInfo[] = await Promise.all(
+    targets.map(async (t) => {
+      const p = join(projectRoot, t);
+      const s = await stat(p);
+      return { file: basename(t), path: p, totalSize: s.size };
+    }),
+  );
 
   return {
     skillCount: skills.length,
-    indexSize: stats.size,
-    agentsMdPath,
+    managedSize,
+    targets: targetInfos,
   };
 }

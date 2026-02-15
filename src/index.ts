@@ -33,5 +33,6 @@ export type {
   SkillEntry,
   SkillFile,
   SyncResult,
+  TargetFileInfo,
 } from "./lib/types.js";
-export { buildManagedSection, regenerateFromConfig, writeAgentsMd } from "./lib/writer.js";
+export { buildManagedSection, regenerateFromConfig, writeTargetFile } from "./lib/writer.js";

@@ -1,14 +1,19 @@
 import * as p from "@clack/prompts";
 import pc from "picocolors";
 import { CONTEXT_BUDGET_DANGER_KB, CONTEXT_BUDGET_WARN_KB } from "../lib/constants.js";
+import type { TargetFileInfo } from "../lib/types.js";
 
 export function pluralize(count: number, singular: string, plural: string): string {
   return count === 1 ? singular : plural;
 }
 
-export function logContextSize(indexSize: number): void {
-  const sizeKb = indexSize / 1024;
-  const sizeFormatted = `${sizeKb.toFixed(1)} KB`;
+function formatKb(bytes: number): string {
+  return `${(bytes / 1024).toFixed(1)} KB`;
+}
+
+export function logContextSize(managedSize: number, targets: TargetFileInfo[]): void {
+  const sizeKb = managedSize / 1024;
+  const sizeFormatted = formatKb(managedSize);
   let sizeLabel: string;
   if (sizeKb < CONTEXT_BUDGET_WARN_KB) {
     sizeLabel = pc.green(sizeFormatted);
@@ -18,7 +23,10 @@ export function logContextSize(indexSize: number): void {
     sizeLabel = pc.red(`${sizeFormatted} — may degrade agent performance`);
   }
 
-  p.log.info(`Context size: ${sizeLabel}`);
+  const targetLines = targets.map(
+    (t) => `   ${t.file}  ${pc.dim(`${formatKb(t.totalSize)} total`)}`,
+  );
+  p.log.info(`Context: ${sizeLabel} (managed section)\n${targetLines.join("\n")}`);
 }
 
 export function handleCommandError(error: unknown, spinner?: ReturnType<typeof p.spinner>): never {

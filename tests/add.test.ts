@@ -28,7 +28,7 @@ describe("add", () => {
     const result = await addSkill(testDir, "react-patterns");
 
     expect(result.skillName).toBe("react-patterns");
-    expect(result.indexSize).toBeGreaterThan(0);
+    expect(result.managedSize).toBeGreaterThan(0);
 
     const agentsMd = await readFile(join(testDir, TARGET_FILE), "utf-8");
     expect(agentsMd).toContain("[react-patterns]");
@@ -137,6 +137,6 @@ describe("add", () => {
     expect(agentsMd).toContain("[skill-1]");
     expect(agentsMd).toContain("[skill-2]");
     expect(agentsMd).toContain("[skill-3]");
-    expect(result.indexSize).toBeGreaterThan(0);
+    expect(result.managedSize).toBeGreaterThan(0);
   });
 });

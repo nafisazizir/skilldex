@@ -30,7 +30,7 @@ export async function removeSkill(
   return {
     skillName,
     wasDeleted: deleteFiles,
-    indexSize: result.indexSize,
-    agentsMdPath: result.agentsMdPath,
+    managedSize: result.managedSize,
+    targets: result.targets,
   };
 }
