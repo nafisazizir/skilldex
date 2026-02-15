@@ -1,5 +1,6 @@
 import * as p from "@clack/prompts";
 import pc from "picocolors";
+import { getAgentDisplayName } from "../lib/agents.js";
 import { CONTEXT_BUDGET_DANGER_KB, CONTEXT_BUDGET_WARN_KB } from "../lib/constants.js";
 import type { TargetFileInfo } from "../lib/types.js";
 
@@ -27,6 +28,12 @@ export function logContextSize(managedSize: number, targets: TargetFileInfo[]): 
     (t) => `   ${t.file}  ${pc.dim(`${formatKb(t.totalSize)} total`)}`,
   );
   p.log.info(`Context: ${sizeLabel} (managed section)\n${targetLines.join("\n")}`);
+}
+
+export function formatSkillPath(relativePath: string): string {
+  const agent = getAgentDisplayName(relativePath);
+  if (agent) return `${pc.cyan(agent)}  ${pc.dim(relativePath)}`;
+  return pc.dim(relativePath);
 }
 
 export function handleCommandError(error: unknown, spinner?: ReturnType<typeof p.spinner>): never {

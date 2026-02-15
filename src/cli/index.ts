@@ -2,6 +2,7 @@ import * as p from "@clack/prompts";
 import { Command } from "commander";
 import pc from "picocolors";
 import { addSkill } from "../lib/add.js";
+import { getAgentDisplayName } from "../lib/agents.js";
 import { readConfig } from "../lib/config.js";
 import { TARGET_FILE } from "../lib/constants.js";
 import { initWithSkills } from "../lib/init.js";
@@ -9,7 +10,7 @@ import { listSkills } from "../lib/list.js";
 import { removeSkill } from "../lib/remove.js";
 import { scanForSkills } from "../lib/scanner.js";
 import { syncSkills } from "../lib/sync.js";
-import { handleCommandError, logContextSize, pluralize } from "./format.js";
+import { formatSkillPath, handleCommandError, logContextSize, pluralize } from "./format.js";
 
 const program = new Command();
 
@@ -96,8 +97,12 @@ program
         options: skills.map((s) => {
           const relPath = s.relativePath;
           const hasCollision = (nameCount.get(s.name) ?? 0) > 1;
-          const hint = hasCollision ? relPath : s.description || undefined;
-          return { value: relPath, label: s.name, hint };
+          if (hasCollision) {
+            const agent = getAgentDisplayName(relPath);
+            const label = agent ? `${s.name} - ${agent}` : s.name;
+            return { value: relPath, label, hint: relPath };
+          }
+          return { value: relPath, label: s.name, hint: s.description || undefined };
         }),
         initialValues: skills.map((s) => s.relativePath),
         required: true,
@@ -153,10 +158,12 @@ program
             message: `Multiple skills named "${skillName}" found. Which one?`,
             options: matches.map((sk) => {
               const indexed = indexedPaths.has(sk.relativePath);
+              const agent = getAgentDisplayName(sk.relativePath);
+              const hint = indexed ? "already indexed" : sk.relativePath;
               return {
                 value: sk.relativePath,
-                label: sk.relativePath,
-                hint: indexed ? "already indexed" : undefined,
+                label: agent ?? sk.relativePath,
+                hint,
                 disabled: indexed,
               };
             }),
@@ -205,10 +212,10 @@ program
         if (matches.length > 1) {
           const selected = await p.select({
             message: `Multiple skills named "${skillName}" indexed. Which one?`,
-            options: matches.map((sk) => ({
-              value: sk.path,
-              label: sk.path,
-            })),
+            options: matches.map((sk) => {
+              const agent = getAgentDisplayName(sk.path);
+              return { value: sk.path, label: agent ?? sk.path, hint: sk.path };
+            }),
           });
 
           if (p.isCancel(selected)) {
@@ -262,7 +269,7 @@ program
       if (result.indexed.length > 0) {
         p.log.step(pc.bold("Indexed skills"));
         const indexedLines = result.indexed.map(
-          (skill) => `  ${pc.green(skill.name)}  ${pc.dim(skill.path)}`,
+          (skill) => `  ${pc.green(skill.name)}  ${formatSkillPath(skill.path)}`,
         );
         p.log.info(indexedLines.join("\n"));
       } else {
@@ -272,7 +279,7 @@ program
       if (result.available.length > 0) {
         p.log.step(pc.bold("Available skills (not indexed)"));
         const availableLines = result.available.map(
-          (skill) => `  ${pc.yellow(skill.name)}  ${pc.dim(skill.path)}`,
+          (skill) => `  ${pc.yellow(skill.name)}  ${formatSkillPath(skill.path)}`,
         );
         p.log.info(availableLines.join("\n"));
       }

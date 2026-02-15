@@ -48,6 +48,12 @@ tests/              # Test files (vitest)
 
 - **Vercel Skills CLI:** https://github.com/vercel-labs/skills — The open agent skills tool (`npx skills`). Supports 35+ agents with per-agent directory conventions. Key reference for multi-agent directory structures and skill format (SKILL.md). Skilldex complements this — they handle skill *installation*, we handle skill *indexing* into passive context.
 
+## CLI Display Design
+
+- **Agent name is primary, path is secondary.** In interactive selects, show the agent display name as the label and the skill path as the `hint` (only visible on hover). Never combine both in the label.
+- `getAgentDisplayName()` maps a relative skill path to its agent's display name (e.g., `.cursor/skills/foo` → `"Cursor"`). Falls back to showing the raw path when no agent matches.
+- For name collisions in `init`, the label is `skillName - AgentName` with the path as hint.
+
 ## Dev Notes
 
 Private dev notes (gitignored) are in `.dev/`:

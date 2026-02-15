@@ -27,3 +27,13 @@ export const AGENT_SOURCES: AgentSource[] = [
 export function getUniqueSkillsDirs(): string[] {
   return [...new Set(AGENT_SOURCES.map((a) => a.skillsDir))];
 }
+
+/** Maps a skill's relative path to the first matching agent's display name. */
+export function getAgentDisplayName(relativePath: string): string | undefined {
+  for (const agent of AGENT_SOURCES) {
+    if (relativePath.startsWith(`${agent.skillsDir}/`) || relativePath === agent.skillsDir) {
+      return agent.displayName;
+    }
+  }
+  return undefined;
+}

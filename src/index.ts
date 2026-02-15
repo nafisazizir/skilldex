@@ -2,7 +2,7 @@
 
 export { addSkill } from "./lib/add.js";
 export type { AgentSource } from "./lib/agents.js";
-export { AGENT_SOURCES, getUniqueSkillsDirs } from "./lib/agents.js";
+export { AGENT_SOURCES, getAgentDisplayName, getUniqueSkillsDirs } from "./lib/agents.js";
 export { readConfig, writeConfig } from "./lib/config.js";
 export {
   CONFIG_FILENAME,
