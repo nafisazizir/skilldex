@@ -1,35 +1,23 @@
-import { mkdir, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { rm } from "node:fs/promises";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { addSkill } from "../src/lib/add.js";
 import { SKILLS_DIR_SEGMENTS } from "../src/lib/constants.js";
 import { listSkills } from "../src/lib/list.js";
-import { createSkill } from "./helpers.js";
+import { createSkill, useTempDir } from "./helpers.js";
 
 describe("listSkills", () => {
-  let testDir: string;
-
-  beforeEach(async () => {
-    testDir = join(
-      tmpdir(),
-      `skilldex-list-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    );
-    await mkdir(testDir, { recursive: true });
-  });
-
-  afterEach(async () => {
-    await rm(testDir, { recursive: true, force: true });
-  });
+  const { getDir } = useTempDir();
 
   it("returns empty arrays when no skills exist", async () => {
-    const result = await listSkills(testDir);
+    const result = await listSkills(getDir());
 
     expect(result.indexed).toEqual([]);
     expect(result.available).toEqual([]);
   });
 
   it("returns indexed skills with correct info", async () => {
+    const testDir = getDir();
     await createSkill(testDir, "my-skill", "A skill", { "guide.md": "some content" });
     await addSkill(testDir, "my-skill");
 
@@ -42,6 +30,7 @@ describe("listSkills", () => {
   });
 
   it("lists available (not indexed) skills separately", async () => {
+    const testDir = getDir();
     await createSkill(testDir, "indexed-skill", "Indexed", { "a.md": "content" });
     await createSkill(testDir, "available-skill", "Available", { "b.md": "content" });
     await addSkill(testDir, "indexed-skill");
@@ -58,6 +47,7 @@ describe("listSkills", () => {
   });
 
   it("handles multiple indexed and available skills together", async () => {
+    const testDir = getDir();
     await createSkill(testDir, "alpha", "First", { "a.md": "content-a" });
     await createSkill(testDir, "bravo", "Second", { "b.md": "content-b" });
     await createSkill(testDir, "charlie", "Third", { "c.md": "content-c" });
@@ -75,6 +65,7 @@ describe("listSkills", () => {
   });
 
   it("handles skills with no description", async () => {
+    const testDir = getDir();
     await createSkill(testDir, "no-desc", "", { "guide.md": "content" });
     await addSkill(testDir, "no-desc");
 
@@ -90,6 +81,7 @@ describe("listSkills", () => {
   });
 
   it("skips indexed skills whose directories were deleted", async () => {
+    const testDir = getDir();
     await createSkill(testDir, "exists", "Still here", { "a.md": "content" });
     await createSkill(testDir, "gone", "Will be removed", { "b.md": "content" });
 

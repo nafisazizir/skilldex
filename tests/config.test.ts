@@ -1,28 +1,16 @@
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readConfig, writeConfig } from "../src/lib/config.js";
 import { CONFIG_FILENAME, TARGET_FILE } from "../src/lib/constants.js";
 import type { Config } from "../src/lib/types.js";
+import { useTempDir } from "./helpers.js";
 
 describe("config", () => {
-  let testDir: string;
-
-  beforeEach(async () => {
-    testDir = join(
-      tmpdir(),
-      `skilldex-config-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    );
-    await mkdir(testDir, { recursive: true });
-  });
-
-  afterEach(async () => {
-    await rm(testDir, { recursive: true, force: true });
-  });
+  const { getDir } = useTempDir();
 
   it("returns default config when file does not exist", async () => {
-    const config = await readConfig(testDir);
+    const config = await readConfig(getDir());
 
     expect(config.version).toBe(1);
     expect(config.targets).toEqual(["AGENTS.md"]);
@@ -30,6 +18,7 @@ describe("config", () => {
   });
 
   it("reads existing config file", async () => {
+    const testDir = getDir();
     const testConfig: Config = {
       version: 1,
       targets: [TARGET_FILE],
@@ -52,6 +41,7 @@ describe("config", () => {
   });
 
   it("writes config to file", async () => {
+    const testDir = getDir();
     const testConfig: Config = {
       version: 1,
       targets: [TARGET_FILE],
@@ -70,6 +60,7 @@ describe("config", () => {
   });
 
   it("returns default config on invalid JSON", async () => {
+    const testDir = getDir();
     const configPath = join(testDir, CONFIG_FILENAME);
     await writeFile(configPath, "invalid json {", "utf-8");
 
@@ -81,6 +72,7 @@ describe("config", () => {
   });
 
   it("returns default config on malformed structure", async () => {
+    const testDir = getDir();
     const configPath = join(testDir, CONFIG_FILENAME);
     await writeFile(configPath, JSON.stringify({ version: 1 }), "utf-8");
 
@@ -92,6 +84,7 @@ describe("config", () => {
   });
 
   it("preserves formatting when writing config", async () => {
+    const testDir = getDir();
     const testConfig: Config = {
       version: 1,
       targets: [TARGET_FILE],
@@ -111,6 +104,7 @@ describe("config", () => {
   });
 
   it("sorts skills alphabetically by name when writing", async () => {
+    const testDir = getDir();
     const testConfig: Config = {
       version: 1,
       targets: [TARGET_FILE],
@@ -128,6 +122,7 @@ describe("config", () => {
   });
 
   it("can read config after multiple writes", async () => {
+    const testDir = getDir();
     const config1: Config = {
       version: 1,
       targets: [TARGET_FILE],
@@ -154,6 +149,7 @@ describe("config", () => {
   });
 
   it("supports multiple targets in config", async () => {
+    const testDir = getDir();
     const testConfig: Config = {
       version: 1,
       targets: ["AGENTS.md", "CLAUDE.md"],

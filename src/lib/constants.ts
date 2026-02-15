@@ -1,3 +1,5 @@
+import { join } from "node:path";
+
 export const START_TAG = "<!-- skilldex:start (auto-generated, do not edit) -->";
 export const END_TAG = "<!-- skilldex:end -->";
 
@@ -10,3 +12,7 @@ export const INDEX_INSTRUCTION =
   "IMPORTANT: Prefer retrieval-led reasoning over pre-training-led reasoning for any tasks covered by indexed skills.";
 export const CONTEXT_BUDGET_WARN_KB = 20;
 export const CONTEXT_BUDGET_DANGER_KB = 40;
+
+export function skillsDir(projectRoot: string): string {
+  return join(projectRoot, ...SKILLS_DIR_SEGMENTS);
+}

@@ -1,26 +1,17 @@
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readConfig } from "../src/lib/config.js";
 import { START_TAG, TARGET_FILE } from "../src/lib/constants.js";
 import { init, initWithSkills } from "../src/lib/init.js";
 import { scanForSkills } from "../src/lib/scanner.js";
-import { createSkill } from "./helpers.js";
+import { createSkill, useTempDir } from "./helpers.js";
 
 describe("init", () => {
-  let testDir: string;
-
-  beforeEach(async () => {
-    testDir = join(tmpdir(), `skilldex-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
-    await mkdir(testDir, { recursive: true });
-  });
-
-  afterEach(async () => {
-    await rm(testDir, { recursive: true, force: true });
-  });
+  const { getDir } = useTempDir();
 
   it("creates AGENTS.md with indexed skills (--yes mode)", async () => {
+    const testDir = getDir();
     await createSkill(testDir, "react-patterns", "React best practices", ["hooks.md", "state.md"]);
     await createSkill(testDir, "testing", "Testing guidelines", ["unit.md"]);
 
@@ -42,6 +33,7 @@ describe("init", () => {
   });
 
   it("filters to selected skills only", async () => {
+    const testDir = getDir();
     await createSkill(testDir, "skill-a", "First", ["guide.md"]);
     await createSkill(testDir, "skill-b", "Second", ["guide.md"]);
 
@@ -58,6 +50,7 @@ describe("init", () => {
   });
 
   it("returns zero skills when none found", async () => {
+    const testDir = getDir();
     const result = await init({ projectRoot: testDir, yes: true });
 
     expect(result.skillCount).toBe(0);
@@ -67,6 +60,7 @@ describe("init", () => {
   });
 
   it("preserves existing AGENTS.md content", async () => {
+    const testDir = getDir();
     await writeFile(join(testDir, TARGET_FILE), "# My Project Config\n\nCustom content.\n");
     await createSkill(testDir, "my-skill", "A skill", ["docs.md"]);
 
@@ -79,6 +73,7 @@ describe("init", () => {
   });
 
   it("writes to custom target file when specified", async () => {
+    const testDir = getDir();
     await createSkill(testDir, "my-skill", "A skill", ["guide.md"]);
 
     const skills = await scanForSkills(testDir);
@@ -95,6 +90,7 @@ describe("init", () => {
   });
 
   it("writes to multiple targets simultaneously", async () => {
+    const testDir = getDir();
     await createSkill(testDir, "my-skill", "A skill", ["guide.md"]);
 
     const skills = await scanForSkills(testDir);

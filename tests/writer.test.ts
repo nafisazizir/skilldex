@@ -1,9 +1,9 @@
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { END_TAG, START_TAG, TARGET_FILE } from "../src/lib/constants.js";
 import { buildManagedSection, writeTargetFile } from "../src/lib/writer.js";
+import { useTempDir } from "./helpers.js";
 
 describe("buildManagedSection", () => {
   it("wraps content in start and end tags", () => {
@@ -13,27 +13,19 @@ describe("buildManagedSection", () => {
 });
 
 describe("writeTargetFile", () => {
-  let testDir: string;
-
-  beforeEach(async () => {
-    testDir = join(tmpdir(), `skilldex-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
-    await mkdir(testDir, { recursive: true });
-  });
-
-  afterEach(async () => {
-    await rm(testDir, { recursive: true, force: true });
-  });
+  const { getDir } = useTempDir();
 
   it("creates new AGENTS.md when file does not exist", async () => {
-    await writeTargetFile(testDir, "test index");
+    await writeTargetFile(getDir(), "test index");
 
-    const content = await readFile(join(testDir, TARGET_FILE), "utf-8");
+    const content = await readFile(join(getDir(), TARGET_FILE), "utf-8");
     expect(content).toContain(START_TAG);
     expect(content).toContain("test index");
     expect(content).toContain(END_TAG);
   });
 
   it("appends managed section to existing AGENTS.md without tags", async () => {
+    const testDir = getDir();
     await writeFile(join(testDir, TARGET_FILE), "# Existing Content\n\nSome text here.", "utf-8");
 
     await writeTargetFile(testDir, "new index");
@@ -52,6 +44,7 @@ describe("writeTargetFile", () => {
   });
 
   it("replaces content between existing tags", async () => {
+    const testDir = getDir();
     const existing = `# My Project
 
 ${START_TAG}
@@ -71,6 +64,7 @@ ${END_TAG}
   });
 
   it("preserves surrounding content when replacing tags", async () => {
+    const testDir = getDir();
     const existing = `Before section
 ${START_TAG}
 old
@@ -87,15 +81,16 @@ After section`;
   });
 
   it("writes to custom target file", async () => {
-    await writeTargetFile(testDir, "custom index", "CLAUDE.md");
+    await writeTargetFile(getDir(), "custom index", "CLAUDE.md");
 
-    const content = await readFile(join(testDir, "CLAUDE.md"), "utf-8");
+    const content = await readFile(join(getDir(), "CLAUDE.md"), "utf-8");
     expect(content).toContain(START_TAG);
     expect(content).toContain("custom index");
     expect(content).toContain(END_TAG);
   });
 
   it("writes to multiple targets when called in a loop", async () => {
+    const testDir = getDir();
     const targets = ["AGENTS.md", "CLAUDE.md"];
     for (const target of targets) {
       await writeTargetFile(testDir, "shared index", target);

@@ -1,34 +1,22 @@
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readConfig, writeConfig } from "../src/lib/config.js";
 import { END_TAG, SKILLS_DIR_SEGMENTS, START_TAG, TARGET_FILE } from "../src/lib/constants.js";
 import { initWithSkills } from "../src/lib/init.js";
 import { scanForSkills } from "../src/lib/scanner.js";
 import { syncSkills } from "../src/lib/sync.js";
-import { createSkill } from "./helpers.js";
+import { createSkill, useTempDir } from "./helpers.js";
 
 describe("sync", () => {
-  let testDir: string;
-
-  beforeEach(async () => {
-    testDir = join(
-      tmpdir(),
-      `skilldex-sync-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    );
-    await mkdir(testDir, { recursive: true });
-  });
-
-  afterEach(async () => {
-    await rm(testDir, { recursive: true, force: true });
-  });
+  const { getDir } = useTempDir();
 
   async function setupIndexedSkill(
     name: string,
     description: string,
     files: string[],
   ): Promise<void> {
+    const testDir = getDir();
     await createSkill(testDir, name, description, files);
     const config = await readConfig(testDir);
     config.skills.push({ name, path: `.agents/skills/${name}` });
@@ -38,18 +26,19 @@ describe("sync", () => {
   it("returns no changes when index is already up to date", async () => {
     await setupIndexedSkill("my-skill", "A skill", ["guide.md"]);
     // Generate initial AGENTS.md
-    await syncSkills(testDir);
+    await syncSkills(getDir());
 
     // Sync again — nothing changed
-    const result = await syncSkills(testDir);
+    const result = await syncSkills(getDir());
 
     expect(result.changed).toBe(false);
     expect(result.removed).toEqual([]);
     expect(result.managedSize).toBeGreaterThan(0);
-    expect(result.targets.map((t) => t.path)).toEqual([join(testDir, TARGET_FILE)]);
+    expect(result.targets.map((t) => t.path)).toEqual([join(getDir(), TARGET_FILE)]);
   });
 
   it("detects changes after modifying a skill file", async () => {
+    const testDir = getDir();
     await setupIndexedSkill("my-skill", "A skill", ["guide.md"]);
     await syncSkills(testDir);
 
@@ -64,6 +53,7 @@ describe("sync", () => {
   });
 
   it("removes stale entries when skill directory is deleted", async () => {
+    const testDir = getDir();
     await setupIndexedSkill("keep-skill", "Kept", ["a.md"]);
     await setupIndexedSkill("stale-skill", "Stale", ["b.md"]);
     await syncSkills(testDir);
@@ -85,13 +75,14 @@ describe("sync", () => {
   });
 
   it("handles empty config with no skills indexed", async () => {
-    const result = await syncSkills(testDir);
+    const result = await syncSkills(getDir());
 
     expect(result.changed).toBe(false);
     expect(result.removed).toEqual([]);
   });
 
   it("detects changes after adding a new file to a skill", async () => {
+    const testDir = getDir();
     await setupIndexedSkill("my-skill", "A skill", ["guide.md"]);
     await syncSkills(testDir);
 
@@ -107,6 +98,7 @@ describe("sync", () => {
   });
 
   it("detects changes after removing a file from a skill", async () => {
+    const testDir = getDir();
     await setupIndexedSkill("my-skill", "A skill", ["guide.md", "extra.md"]);
     await syncSkills(testDir);
 
@@ -124,6 +116,7 @@ describe("sync", () => {
   });
 
   it("cleans multiple stale entries from config", async () => {
+    const testDir = getDir();
     await setupIndexedSkill("good", "Good skill", ["a.md"]);
     await setupIndexedSkill("stale-1", "Gone 1", ["b.md"]);
     await setupIndexedSkill("stale-2", "Gone 2", ["c.md"]);
@@ -143,6 +136,7 @@ describe("sync", () => {
   });
 
   it("produces correct AGENTS.md content after sync", async () => {
+    const testDir = getDir();
     await setupIndexedSkill("alpha", "Alpha skill", ["docs.md"]);
     await setupIndexedSkill("beta", "Beta skill", ["guide.md"]);
 
@@ -162,7 +156,7 @@ describe("sync", () => {
   it("returns correct SyncResult structure", async () => {
     await setupIndexedSkill("my-skill", "A skill", ["guide.md"]);
 
-    const result = await syncSkills(testDir);
+    const result = await syncSkills(getDir());
 
     expect(result).toHaveProperty("removed");
     expect(result).toHaveProperty("changed");
@@ -178,6 +172,7 @@ describe("sync", () => {
   });
 
   it("syncs using custom target files from config", async () => {
+    const testDir = getDir();
     await createSkill(testDir, "my-skill", "A skill", ["guide.md"]);
 
     // Init with custom target
@@ -199,6 +194,7 @@ describe("sync", () => {
   });
 
   it("detects changes across multiple targets", async () => {
+    const testDir = getDir();
     await createSkill(testDir, "my-skill", "A skill", ["guide.md"]);
 
     // Init with multiple targets

@@ -1,6 +1,20 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { afterEach, beforeEach } from "vitest";
 import { SKILL_META_FILE, SKILLS_DIR_SEGMENTS } from "../src/lib/constants.js";
+
+export function useTempDir(): { getDir: () => string } {
+  let dir: string;
+  beforeEach(async () => {
+    dir = join(tmpdir(), `skilldex-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    await mkdir(dir, { recursive: true });
+  });
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
+  return { getDir: () => dir };
+}
 
 /**
  * Create a skill directory with SKILL.md frontmatter and content files for testing.

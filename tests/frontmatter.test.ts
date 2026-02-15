@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseFrontmatter } from "../src/lib/frontmatter.js";
+import { parseFrontmatter } from "../src/lib/scanner.js";
 
 describe("parseFrontmatter", () => {
   it("parses valid frontmatter with multiple keys", () => {

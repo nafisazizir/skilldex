@@ -6,6 +6,19 @@ import { generateIndex } from "./indexer.js";
 import { safeReadFile, scanForSkills } from "./scanner.js";
 import type { InitResult, TargetFileInfo } from "./types.js";
 
+export async function getTargetInfos(
+  projectRoot: string,
+  targets: string[],
+): Promise<TargetFileInfo[]> {
+  return Promise.all(
+    targets.map(async (t) => {
+      const p = join(projectRoot, t);
+      const s = await stat(p);
+      return { file: basename(t), path: p, totalSize: s.size };
+    }),
+  );
+}
+
 export function buildManagedSection(indexContent: string): string {
   return `${START_TAG}\n${indexContent}\n${END_TAG}`;
 }
@@ -53,13 +66,7 @@ export async function regenerateFromConfig(projectRoot: string): Promise<InitRes
   }
 
   const managedSize = Buffer.byteLength(buildManagedSection(index));
-  const targets: TargetFileInfo[] = await Promise.all(
-    config.targets.map(async (t) => {
-      const p = join(projectRoot, t);
-      const s = await stat(p);
-      return { file: basename(t), path: p, totalSize: s.size };
-    }),
-  );
+  const targets = await getTargetInfos(projectRoot, config.targets);
 
   return {
     skillCount: skills.length,

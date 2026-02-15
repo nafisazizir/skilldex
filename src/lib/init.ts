@@ -1,11 +1,10 @@
-import { stat } from "node:fs/promises";
-import { basename, join, relative } from "node:path";
+import { relative } from "node:path";
 import { writeConfig } from "./config.js";
 import { TARGET_FILE } from "./constants.js";
 import { generateIndex } from "./indexer.js";
 import { scanForSkills } from "./scanner.js";
-import type { DiscoveredSkill, InitResult, TargetFileInfo } from "./types.js";
-import { buildManagedSection, writeTargetFile } from "./writer.js";
+import type { DiscoveredSkill, InitResult } from "./types.js";
+import { buildManagedSection, getTargetInfos, writeTargetFile } from "./writer.js";
 
 /** Scan for skills, filter by selection, and write the index to target files. */
 export async function init(options: {
@@ -52,13 +51,7 @@ export async function initWithSkills(
   await writeConfig(projectRoot, config);
 
   const managedSize = Buffer.byteLength(buildManagedSection(index));
-  const targetInfos: TargetFileInfo[] = await Promise.all(
-    targets.map(async (t) => {
-      const p = join(projectRoot, t);
-      const s = await stat(p);
-      return { file: basename(t), path: p, totalSize: s.size };
-    }),
-  );
+  const targetInfos = await getTargetInfos(projectRoot, targets);
 
   return {
     skillCount: skills.length,

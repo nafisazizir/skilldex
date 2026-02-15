@@ -62,23 +62,16 @@ export interface RemoveResult {
   targets: TargetFileInfo[];
 }
 
-export interface IndexedSkillInfo {
+export interface SkillInfo {
   name: string;
   /** Relative path from project root */
   path: string;
   description: string;
-}
-
-export interface AvailableSkillInfo {
-  name: string;
-  description: string;
-  /** Relative path from project root */
-  path: string;
 }
 
 export interface ListResult {
-  indexed: IndexedSkillInfo[];
-  available: AvailableSkillInfo[];
+  indexed: SkillInfo[];
+  available: SkillInfo[];
 }
 
 export interface SyncResult {

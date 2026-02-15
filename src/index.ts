@@ -12,9 +12,9 @@ export {
   SKILL_META_FILE,
   SKILLS_DIR_SEGMENTS,
   START_TAG,
+  skillsDir,
   TARGET_FILE,
 } from "./lib/constants.js";
-export { parseFrontmatter } from "./lib/frontmatter.js";
 export { generateIndex } from "./lib/indexer.js";
 export { init, initWithSkills } from "./lib/init.js";
 export { listSkills } from "./lib/list.js";
@@ -23,15 +23,14 @@ export { scanForSkills } from "./lib/scanner.js";
 export { syncSkills } from "./lib/sync.js";
 export type {
   AddResult,
-  AvailableSkillInfo,
   Config,
   DiscoveredSkill,
-  IndexedSkillInfo,
   InitResult,
   ListResult,
   RemoveResult,
   SkillEntry,
   SkillFile,
+  SkillInfo,
   SyncResult,
   TargetFileInfo,
 } from "./lib/types.js";

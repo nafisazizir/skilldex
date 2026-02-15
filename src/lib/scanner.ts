@@ -1,9 +1,27 @@
 import type { Dirent } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import { join, relative } from "node:path";
-import { SKILL_META_FILE, SKILLS_DIR_SEGMENTS } from "./constants.js";
-import { parseFrontmatter } from "./frontmatter.js";
+import { SKILL_META_FILE, skillsDir } from "./constants.js";
 import type { DiscoveredSkill, SkillFile } from "./types.js";
+
+/** Extract key-value pairs from YAML frontmatter (between `---` fences). */
+export function parseFrontmatter(content: string): Record<string, string> {
+  const result: Record<string, string> = {};
+  if (!content.startsWith("---")) return result;
+
+  const endIndex = content.indexOf("\n---", 3);
+  if (endIndex === -1) return result;
+
+  const block = content.slice(4, endIndex);
+  for (const line of block.split("\n")) {
+    const colonIndex = line.indexOf(":");
+    if (colonIndex === -1) continue;
+    const key = line.slice(0, colonIndex).trim();
+    const value = line.slice(colonIndex + 1).trim();
+    if (key) result[key] = value;
+  }
+  return result;
+}
 
 async function safeReaddir(dir: string): Promise<Dirent[]> {
   try {
@@ -42,14 +60,14 @@ async function collectMdFiles(dir: string, skillRoot: string): Promise<SkillFile
 
 /** Scan for skills in the project's `.agents/skills/` directory. */
 export async function scanForSkills(projectRoot: string): Promise<DiscoveredSkill[]> {
-  const skillsDir = join(projectRoot, ...SKILLS_DIR_SEGMENTS);
-  const entries = await safeReaddir(skillsDir);
+  const dir = skillsDir(projectRoot);
+  const entries = await safeReaddir(dir);
   const skills: DiscoveredSkill[] = [];
 
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
 
-    const skillPath = join(skillsDir, entry.name);
+    const skillPath = join(dir, entry.name);
     let description = "";
 
     const skillMd = await safeReadFile(join(skillPath, SKILL_META_FILE));

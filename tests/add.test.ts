@@ -1,28 +1,16 @@
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { addSkill } from "../src/lib/add.js";
 import { readConfig } from "../src/lib/config.js";
 import { END_TAG, START_TAG, TARGET_FILE } from "../src/lib/constants.js";
-import { createSkill } from "./helpers.js";
+import { createSkill, useTempDir } from "./helpers.js";
 
 describe("add", () => {
-  let testDir: string;
-
-  beforeEach(async () => {
-    testDir = join(
-      tmpdir(),
-      `skilldex-add-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    );
-    await mkdir(testDir, { recursive: true });
-  });
-
-  afterEach(async () => {
-    await rm(testDir, { recursive: true, force: true });
-  });
+  const { getDir } = useTempDir();
 
   it("adds a skill to empty index", async () => {
+    const testDir = getDir();
     await createSkill(testDir, "react-patterns", "React best practices", ["hooks.md"]);
 
     const result = await addSkill(testDir, "react-patterns");
@@ -36,6 +24,7 @@ describe("add", () => {
   });
 
   it("adds a skill to existing index", async () => {
+    const testDir = getDir();
     await createSkill(testDir, "skill-a", "First skill", ["guide.md"]);
     await createSkill(testDir, "skill-b", "Second skill", ["docs.md"]);
 
@@ -55,6 +44,7 @@ describe("add", () => {
   });
 
   it("updates config with new skill", async () => {
+    const testDir = getDir();
     await createSkill(testDir, "my-skill", "A skill", ["content.md"]);
 
     await addSkill(testDir, "my-skill");
@@ -66,6 +56,7 @@ describe("add", () => {
   });
 
   it("throws error when adding duplicate skill", async () => {
+    const testDir = getDir();
     await createSkill(testDir, "duplicate-skill", "A skill", ["test.md"]);
 
     await addSkill(testDir, "duplicate-skill");
@@ -76,12 +67,13 @@ describe("add", () => {
   });
 
   it("throws error when skill does not exist", async () => {
-    await expect(addSkill(testDir, "nonexistent-skill")).rejects.toThrow(
+    await expect(addSkill(getDir(), "nonexistent-skill")).rejects.toThrow(
       /Skill "nonexistent-skill" not found/,
     );
   });
 
   it("preserves existing AGENTS.md content outside managed section", async () => {
+    const testDir = getDir();
     await writeFile(join(testDir, TARGET_FILE), "# My Project\n\nCustom content.\n");
     await createSkill(testDir, "my-skill", "A skill", ["docs.md"]);
 
@@ -94,6 +86,7 @@ describe("add", () => {
   });
 
   it("maintains managed section tags", async () => {
+    const testDir = getDir();
     await createSkill(testDir, "my-skill", "A skill", ["docs.md"]);
 
     await addSkill(testDir, "my-skill");
@@ -104,6 +97,7 @@ describe("add", () => {
   });
 
   it("adds skill with multiple files and subdirectories", async () => {
+    const testDir = getDir();
     await createSkill(testDir, "complex-skill", "Complex skill", [
       "guide.md",
       "examples/hook.md",
@@ -122,6 +116,7 @@ describe("add", () => {
   });
 
   it("correctly handles sequential adds", async () => {
+    const testDir = getDir();
     await createSkill(testDir, "skill-1", "First", ["a.md"]);
     await createSkill(testDir, "skill-2", "Second", ["b.md"]);
     await createSkill(testDir, "skill-3", "Third", ["c.md"]);

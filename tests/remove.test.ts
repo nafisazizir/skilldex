@@ -1,27 +1,14 @@
-import { access, mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { access, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { addSkill } from "../src/lib/add.js";
 import { readConfig } from "../src/lib/config.js";
 import { END_TAG, SKILLS_DIR_SEGMENTS, START_TAG, TARGET_FILE } from "../src/lib/constants.js";
 import { removeSkill } from "../src/lib/remove.js";
-import { createSkill } from "./helpers.js";
+import { createSkill, useTempDir } from "./helpers.js";
 
 describe("remove", () => {
-  let testDir: string;
-
-  beforeEach(async () => {
-    testDir = join(
-      tmpdir(),
-      `skilldex-remove-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    );
-    await mkdir(testDir, { recursive: true });
-  });
-
-  afterEach(async () => {
-    await rm(testDir, { recursive: true, force: true });
-  });
+  const { getDir } = useTempDir();
 
   async function exists(path: string): Promise<boolean> {
     try {
@@ -33,6 +20,7 @@ describe("remove", () => {
   }
 
   it("removes skill from config, keeps files (default)", async () => {
+    const testDir = getDir();
     await createSkill(testDir, "my-skill", "A skill", ["docs.md"]);
     await addSkill(testDir, "my-skill");
 
@@ -54,6 +42,7 @@ describe("remove", () => {
   });
 
   it("removes skill and deletes files when deleteFiles=true", async () => {
+    const testDir = getDir();
     await createSkill(testDir, "my-skill", "A skill", ["docs.md"]);
     await addSkill(testDir, "my-skill");
 
@@ -69,6 +58,7 @@ describe("remove", () => {
   });
 
   it("throws on non-indexed skill", async () => {
+    const testDir = getDir();
     await createSkill(testDir, "my-skill", "A skill", ["docs.md"]);
 
     await expect(removeSkill(testDir, "my-skill")).rejects.toThrow(
@@ -77,6 +67,7 @@ describe("remove", () => {
   });
 
   it("removes one skill from multi-skill index, others remain", async () => {
+    const testDir = getDir();
     await createSkill(testDir, "skill-a", "First", ["a.md"]);
     await createSkill(testDir, "skill-b", "Second", ["b.md"]);
     await createSkill(testDir, "skill-c", "Third", ["c.md"]);
@@ -97,6 +88,7 @@ describe("remove", () => {
   });
 
   it("preserves AGENTS.md content outside managed section", async () => {
+    const testDir = getDir();
     await writeFile(join(testDir, TARGET_FILE), "# My Project\n\nCustom content.\n");
     await createSkill(testDir, "my-skill", "A skill", ["docs.md"]);
     await addSkill(testDir, "my-skill");
@@ -112,6 +104,7 @@ describe("remove", () => {
   });
 
   it("handles removal when skill dir was already manually deleted", async () => {
+    const testDir = getDir();
     await createSkill(testDir, "my-skill", "A skill", ["docs.md"]);
     await addSkill(testDir, "my-skill");
 
@@ -128,6 +121,7 @@ describe("remove", () => {
   });
 
   it("returns correct RemoveResult shape", async () => {
+    const testDir = getDir();
     await createSkill(testDir, "my-skill", "A skill", ["docs.md"]);
     await addSkill(testDir, "my-skill");
 
@@ -148,6 +142,7 @@ describe("remove", () => {
   });
 
   it("handles removing last skill (empty index)", async () => {
+    const testDir = getDir();
     await createSkill(testDir, "only-skill", "The only one", ["guide.md"]);
     await addSkill(testDir, "only-skill");
 
