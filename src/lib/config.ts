@@ -7,7 +7,7 @@ import type { Config } from "./types.js";
 function getDefaultConfig(): Config {
   return {
     version: 1,
-    target: TARGET_FILE,
+    targets: [TARGET_FILE],
     skills: [],
   };
 }
@@ -25,7 +25,7 @@ export async function readConfig(projectRoot: string): Promise<Config> {
     // Validate structure
     if (
       typeof parsed.version !== "number" ||
-      typeof parsed.target !== "string" ||
+      !Array.isArray(parsed.targets) ||
       !Array.isArray(parsed.skills)
     ) {
       return getDefaultConfig();

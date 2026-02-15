@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { END_TAG, START_TAG, TARGET_FILE } from "../src/lib/constants.js";
-import { buildManagedSection, writeAgentsMd } from "../src/lib/writer.js";
+import { buildManagedSection, writeTargetFile } from "../src/lib/writer.js";
 
 describe("buildManagedSection", () => {
   it("wraps content in start and end tags", () => {
@@ -12,7 +12,7 @@ describe("buildManagedSection", () => {
   });
 });
 
-describe("writeAgentsMd", () => {
+describe("writeTargetFile", () => {
   let testDir: string;
 
   beforeEach(async () => {
@@ -25,7 +25,7 @@ describe("writeAgentsMd", () => {
   });
 
   it("creates new AGENTS.md when file does not exist", async () => {
-    await writeAgentsMd(testDir, "test index");
+    await writeTargetFile(testDir, "test index");
 
     const content = await readFile(join(testDir, TARGET_FILE), "utf-8");
     expect(content).toContain(START_TAG);
@@ -36,7 +36,7 @@ describe("writeAgentsMd", () => {
   it("appends managed section to existing AGENTS.md without tags", async () => {
     await writeFile(join(testDir, TARGET_FILE), "# Existing Content\n\nSome text here.", "utf-8");
 
-    await writeAgentsMd(testDir, "new index");
+    await writeTargetFile(testDir, "new index");
 
     const content = await readFile(join(testDir, TARGET_FILE), "utf-8");
     expect(content).toContain("# Existing Content");
@@ -61,7 +61,7 @@ ${END_TAG}
 # Footer`;
     await writeFile(join(testDir, TARGET_FILE), existing, "utf-8");
 
-    await writeAgentsMd(testDir, "updated index");
+    await writeTargetFile(testDir, "updated index");
 
     const content = await readFile(join(testDir, TARGET_FILE), "utf-8");
     expect(content).toContain("# My Project");
@@ -78,11 +78,34 @@ ${END_TAG}
 After section`;
     await writeFile(join(testDir, TARGET_FILE), existing, "utf-8");
 
-    await writeAgentsMd(testDir, "new");
+    await writeTargetFile(testDir, "new");
 
     const content = await readFile(join(testDir, TARGET_FILE), "utf-8");
     expect(content).toContain("Before section");
     expect(content).toContain("After section");
     expect(content).toContain("new");
+  });
+
+  it("writes to custom target file", async () => {
+    await writeTargetFile(testDir, "custom index", "CLAUDE.md");
+
+    const content = await readFile(join(testDir, "CLAUDE.md"), "utf-8");
+    expect(content).toContain(START_TAG);
+    expect(content).toContain("custom index");
+    expect(content).toContain(END_TAG);
+  });
+
+  it("writes to multiple targets when called in a loop", async () => {
+    const targets = ["AGENTS.md", "CLAUDE.md"];
+    for (const target of targets) {
+      await writeTargetFile(testDir, "shared index", target);
+    }
+
+    for (const target of targets) {
+      const content = await readFile(join(testDir, target), "utf-8");
+      expect(content).toContain(START_TAG);
+      expect(content).toContain("shared index");
+      expect(content).toContain(END_TAG);
+    }
   });
 });

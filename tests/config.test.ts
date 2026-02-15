@@ -25,14 +25,14 @@ describe("config", () => {
     const config = await readConfig(testDir);
 
     expect(config.version).toBe(1);
-    expect(config.target).toBe("AGENTS.md");
+    expect(config.targets).toEqual(["AGENTS.md"]);
     expect(config.skills).toEqual([]);
   });
 
   it("reads existing config file", async () => {
     const testConfig: Config = {
       version: 1,
-      target: TARGET_FILE,
+      targets: [TARGET_FILE],
       skills: [
         { name: "react-patterns", path: ".agents/skills/react-patterns" },
         { name: "testing", path: ".agents/skills/testing" },
@@ -45,7 +45,7 @@ describe("config", () => {
     const config = await readConfig(testDir);
 
     expect(config.version).toBe(1);
-    expect(config.target).toBe("AGENTS.md");
+    expect(config.targets).toEqual(["AGENTS.md"]);
     expect(config.skills).toHaveLength(2);
     expect(config.skills[0].name).toBe("react-patterns");
     expect(config.skills[1].name).toBe("testing");
@@ -54,7 +54,7 @@ describe("config", () => {
   it("writes config to file", async () => {
     const testConfig: Config = {
       version: 1,
-      target: TARGET_FILE,
+      targets: [TARGET_FILE],
       skills: [{ name: "my-skill", path: ".agents/skills/my-skill" }],
     };
 
@@ -64,7 +64,7 @@ describe("config", () => {
     const parsed = JSON.parse(content) as Config;
 
     expect(parsed.version).toBe(1);
-    expect(parsed.target).toBe(TARGET_FILE);
+    expect(parsed.targets).toEqual([TARGET_FILE]);
     expect(parsed.skills).toHaveLength(1);
     expect(parsed.skills[0].name).toBe("my-skill");
   });
@@ -76,7 +76,7 @@ describe("config", () => {
     const config = await readConfig(testDir);
 
     expect(config.version).toBe(1);
-    expect(config.target).toBe("AGENTS.md");
+    expect(config.targets).toEqual(["AGENTS.md"]);
     expect(config.skills).toEqual([]);
   });
 
@@ -87,14 +87,14 @@ describe("config", () => {
     const config = await readConfig(testDir);
 
     expect(config.version).toBe(1);
-    expect(config.target).toBe("AGENTS.md");
+    expect(config.targets).toEqual(["AGENTS.md"]);
     expect(config.skills).toEqual([]);
   });
 
   it("preserves formatting when writing config", async () => {
     const testConfig: Config = {
       version: 1,
-      target: TARGET_FILE,
+      targets: [TARGET_FILE],
       skills: [
         { name: "skill-a", path: ".agents/skills/skill-a" },
         { name: "skill-b", path: ".agents/skills/skill-b" },
@@ -113,7 +113,7 @@ describe("config", () => {
   it("sorts skills alphabetically by name when writing", async () => {
     const testConfig: Config = {
       version: 1,
-      target: TARGET_FILE,
+      targets: [TARGET_FILE],
       skills: [
         { name: "zulu", path: ".agents/skills/zulu" },
         { name: "alpha", path: ".agents/skills/alpha" },
@@ -130,7 +130,7 @@ describe("config", () => {
   it("can read config after multiple writes", async () => {
     const config1: Config = {
       version: 1,
-      target: TARGET_FILE,
+      targets: [TARGET_FILE],
       skills: [{ name: "skill-a", path: ".agents/skills/skill-a" }],
     };
 
@@ -138,7 +138,7 @@ describe("config", () => {
 
     const config2: Config = {
       version: 1,
-      target: TARGET_FILE,
+      targets: [TARGET_FILE],
       skills: [
         { name: "skill-a", path: ".agents/skills/skill-a" },
         { name: "skill-b", path: ".agents/skills/skill-b" },
@@ -151,5 +151,18 @@ describe("config", () => {
 
     expect(readBack.skills).toHaveLength(2);
     expect(readBack.skills.map((s) => s.name)).toEqual(["skill-a", "skill-b"]);
+  });
+
+  it("supports multiple targets in config", async () => {
+    const testConfig: Config = {
+      version: 1,
+      targets: ["AGENTS.md", "CLAUDE.md"],
+      skills: [{ name: "my-skill", path: ".agents/skills/my-skill" }],
+    };
+
+    await writeConfig(testDir, testConfig);
+
+    const readBack = await readConfig(testDir);
+    expect(readBack.targets).toEqual(["AGENTS.md", "CLAUDE.md"]);
   });
 });
