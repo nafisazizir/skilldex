@@ -6,8 +6,6 @@ import { generateIndex } from "./indexer.js";
 import { safeReadFile, scanForSkills } from "./scanner.js";
 import type { InitResult } from "./types.js";
 
-export { END_TAG, START_TAG };
-
 export function buildManagedSection(indexContent: string): string {
   return `${START_TAG}\n${indexContent}\n${END_TAG}`;
 }

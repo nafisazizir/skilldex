@@ -2,7 +2,8 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { buildManagedSection, END_TAG, START_TAG, writeAgentsMd } from "../src/lib/writer.js";
+import { END_TAG, START_TAG, TARGET_FILE } from "../src/lib/constants.js";
+import { buildManagedSection, writeAgentsMd } from "../src/lib/writer.js";
 
 describe("buildManagedSection", () => {
   it("wraps content in start and end tags", () => {
@@ -26,18 +27,18 @@ describe("writeAgentsMd", () => {
   it("creates new AGENTS.md when file does not exist", async () => {
     await writeAgentsMd(testDir, "test index");
 
-    const content = await readFile(join(testDir, "AGENTS.md"), "utf-8");
+    const content = await readFile(join(testDir, TARGET_FILE), "utf-8");
     expect(content).toContain(START_TAG);
     expect(content).toContain("test index");
     expect(content).toContain(END_TAG);
   });
 
   it("appends managed section to existing AGENTS.md without tags", async () => {
-    await writeFile(join(testDir, "AGENTS.md"), "# Existing Content\n\nSome text here.", "utf-8");
+    await writeFile(join(testDir, TARGET_FILE), "# Existing Content\n\nSome text here.", "utf-8");
 
     await writeAgentsMd(testDir, "new index");
 
-    const content = await readFile(join(testDir, "AGENTS.md"), "utf-8");
+    const content = await readFile(join(testDir, TARGET_FILE), "utf-8");
     expect(content).toContain("# Existing Content");
     expect(content).toContain("Some text here.");
     expect(content).toContain(START_TAG);
@@ -58,11 +59,11 @@ old index content
 ${END_TAG}
 
 # Footer`;
-    await writeFile(join(testDir, "AGENTS.md"), existing, "utf-8");
+    await writeFile(join(testDir, TARGET_FILE), existing, "utf-8");
 
     await writeAgentsMd(testDir, "updated index");
 
-    const content = await readFile(join(testDir, "AGENTS.md"), "utf-8");
+    const content = await readFile(join(testDir, TARGET_FILE), "utf-8");
     expect(content).toContain("# My Project");
     expect(content).toContain("updated index");
     expect(content).toContain("# Footer");
@@ -75,11 +76,11 @@ ${START_TAG}
 old
 ${END_TAG}
 After section`;
-    await writeFile(join(testDir, "AGENTS.md"), existing, "utf-8");
+    await writeFile(join(testDir, TARGET_FILE), existing, "utf-8");
 
     await writeAgentsMd(testDir, "new");
 
-    const content = await readFile(join(testDir, "AGENTS.md"), "utf-8");
+    const content = await readFile(join(testDir, TARGET_FILE), "utf-8");
     expect(content).toContain("Before section");
     expect(content).toContain("After section");
     expect(content).toContain("new");

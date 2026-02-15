@@ -2,6 +2,7 @@ import { mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { SKILL_META_FILE, SKILLS_DIR_SEGMENTS } from "../src/lib/constants.js";
 import { scanForSkills } from "../src/lib/scanner.js";
 
 describe("scanForSkills", () => {
@@ -17,10 +18,10 @@ describe("scanForSkills", () => {
   });
 
   it("discovers skills in .agents/skills/ directory", async () => {
-    const skillDir = join(testDir, ".agents", "skills", "react-patterns");
+    const skillDir = join(testDir, ...SKILLS_DIR_SEGMENTS, "react-patterns");
     await mkdir(skillDir, { recursive: true });
     await writeFile(
-      join(skillDir, "SKILL.md"),
+      join(skillDir, SKILL_META_FILE),
       `---
 description: React best practices
 ---
@@ -38,10 +39,10 @@ description: React best practices
   });
 
   it("discovers skills with nested subdirectories", async () => {
-    const skillDir = join(testDir, ".agents", "skills", "ts-patterns");
+    const skillDir = join(testDir, ...SKILLS_DIR_SEGMENTS, "ts-patterns");
     const subDir = join(skillDir, "patterns");
     await mkdir(subDir, { recursive: true });
-    await writeFile(join(skillDir, "SKILL.md"), "---\ndescription: TS tips\n---");
+    await writeFile(join(skillDir, SKILL_META_FILE), "---\ndescription: TS tips\n---");
     await writeFile(join(skillDir, "basics.md"), "# Basics");
     await writeFile(join(subDir, "generics.md"), "# Generics");
 
@@ -59,7 +60,7 @@ description: React best practices
   });
 
   it("skips non-directory entries in skills folder", async () => {
-    const skillsDir = join(testDir, ".agents", "skills");
+    const skillsDir = join(testDir, ...SKILLS_DIR_SEGMENTS);
     await mkdir(skillsDir, { recursive: true });
     await writeFile(join(skillsDir, "not-a-skill.md"), "# Not a skill");
 
@@ -68,7 +69,7 @@ description: React best practices
   });
 
   it("handles skill without SKILL.md (empty description)", async () => {
-    const skillDir = join(testDir, ".agents", "skills", "bare-skill");
+    const skillDir = join(testDir, ...SKILLS_DIR_SEGMENTS, "bare-skill");
     await mkdir(skillDir, { recursive: true });
     await writeFile(join(skillDir, "guide.md"), "# Guide");
 
@@ -79,9 +80,9 @@ description: React best practices
   });
 
   it("excludes SKILL.md from file list", async () => {
-    const skillDir = join(testDir, ".agents", "skills", "my-skill");
+    const skillDir = join(testDir, ...SKILLS_DIR_SEGMENTS, "my-skill");
     await mkdir(skillDir, { recursive: true });
-    await writeFile(join(skillDir, "SKILL.md"), "---\ndescription: Test\n---");
+    await writeFile(join(skillDir, SKILL_META_FILE), "---\ndescription: Test\n---");
     await writeFile(join(skillDir, "guide.md"), "# Guide");
 
     const skills = await scanForSkills(testDir);

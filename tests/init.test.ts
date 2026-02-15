@@ -2,8 +2,9 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { START_TAG, TARGET_FILE } from "../src/lib/constants.js";
 import { init } from "../src/lib/init.js";
-import { START_TAG } from "../src/lib/writer.js";
+import { createSkill } from "./helpers.js";
 
 describe("init", () => {
   let testDir: string;
@@ -17,32 +18,17 @@ describe("init", () => {
     await rm(testDir, { recursive: true, force: true });
   });
 
-  async function createSkill(name: string, description: string, files: string[]): Promise<void> {
-    const skillDir = join(testDir, ".agents", "skills", name);
-    await mkdir(skillDir, { recursive: true });
-
-    if (description) {
-      await writeFile(join(skillDir, "SKILL.md"), `---\ndescription: ${description}\n---\n`);
-    }
-
-    for (const file of files) {
-      const filePath = join(skillDir, file);
-      await mkdir(join(filePath, ".."), { recursive: true });
-      await writeFile(filePath, `# ${file}`);
-    }
-  }
-
   it("creates AGENTS.md with indexed skills (--yes mode)", async () => {
-    await createSkill("react-patterns", "React best practices", ["hooks.md", "state.md"]);
-    await createSkill("testing", "Testing guidelines", ["unit.md"]);
+    await createSkill(testDir, "react-patterns", "React best practices", ["hooks.md", "state.md"]);
+    await createSkill(testDir, "testing", "Testing guidelines", ["unit.md"]);
 
     const result = await init({ projectRoot: testDir, yes: true });
 
     expect(result.skillCount).toBe(2);
     expect(result.indexSize).toBeGreaterThan(0);
-    expect(result.agentsMdPath).toBe(join(testDir, "AGENTS.md"));
+    expect(result.agentsMdPath).toBe(join(testDir, TARGET_FILE));
 
-    const content = await readFile(join(testDir, "AGENTS.md"), "utf-8");
+    const content = await readFile(join(testDir, TARGET_FILE), "utf-8");
     expect(content).toContain(START_TAG);
     expect(content).toContain("[react-patterns]");
     expect(content).toContain("[testing]");
@@ -51,8 +37,8 @@ describe("init", () => {
   });
 
   it("filters to selected skills only", async () => {
-    await createSkill("skill-a", "First", ["guide.md"]);
-    await createSkill("skill-b", "Second", ["guide.md"]);
+    await createSkill(testDir, "skill-a", "First", ["guide.md"]);
+    await createSkill(testDir, "skill-b", "Second", ["guide.md"]);
 
     const result = await init({
       projectRoot: testDir,
@@ -61,7 +47,7 @@ describe("init", () => {
 
     expect(result.skillCount).toBe(1);
 
-    const content = await readFile(join(testDir, "AGENTS.md"), "utf-8");
+    const content = await readFile(join(testDir, TARGET_FILE), "utf-8");
     expect(content).toContain("[skill-a]");
     expect(content).not.toContain("[skill-b]");
   });
@@ -71,17 +57,17 @@ describe("init", () => {
 
     expect(result.skillCount).toBe(0);
 
-    const content = await readFile(join(testDir, "AGENTS.md"), "utf-8");
+    const content = await readFile(join(testDir, TARGET_FILE), "utf-8");
     expect(content).toContain("[Skills Index]");
   });
 
   it("preserves existing AGENTS.md content", async () => {
-    await writeFile(join(testDir, "AGENTS.md"), "# My Project Config\n\nCustom content.\n");
-    await createSkill("my-skill", "A skill", ["docs.md"]);
+    await writeFile(join(testDir, TARGET_FILE), "# My Project Config\n\nCustom content.\n");
+    await createSkill(testDir, "my-skill", "A skill", ["docs.md"]);
 
     await init({ projectRoot: testDir, yes: true });
 
-    const content = await readFile(join(testDir, "AGENTS.md"), "utf-8");
+    const content = await readFile(join(testDir, TARGET_FILE), "utf-8");
     expect(content).toContain("# My Project Config");
     expect(content).toContain("Custom content.");
     expect(content).toContain("[my-skill]");

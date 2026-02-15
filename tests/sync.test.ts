@@ -3,8 +3,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { readConfig, writeConfig } from "../src/lib/config.js";
+import { END_TAG, SKILLS_DIR_SEGMENTS, START_TAG, TARGET_FILE } from "../src/lib/constants.js";
 import { syncSkills } from "../src/lib/sync.js";
-import { END_TAG, START_TAG } from "../src/lib/writer.js";
+import { createSkill } from "./helpers.js";
 
 describe("sync", () => {
   let testDir: string;
@@ -21,27 +22,12 @@ describe("sync", () => {
     await rm(testDir, { recursive: true, force: true });
   });
 
-  async function createSkill(name: string, description: string, files: string[]): Promise<void> {
-    const skillDir = join(testDir, ".agents", "skills", name);
-    await mkdir(skillDir, { recursive: true });
-
-    if (description) {
-      await writeFile(join(skillDir, "SKILL.md"), `---\ndescription: ${description}\n---\n`);
-    }
-
-    for (const file of files) {
-      const filePath = join(skillDir, file);
-      await mkdir(join(filePath, ".."), { recursive: true });
-      await writeFile(filePath, `# ${file}`);
-    }
-  }
-
   async function setupIndexedSkill(
     name: string,
     description: string,
     files: string[],
   ): Promise<void> {
-    await createSkill(name, description, files);
+    await createSkill(testDir, name, description, files);
     const config = await readConfig(testDir);
     config.skills.push({ name, path: `.agents/skills/${name}` });
     await writeConfig(testDir, config);
@@ -58,7 +44,7 @@ describe("sync", () => {
     expect(result.changed).toBe(false);
     expect(result.removed).toEqual([]);
     expect(result.indexSize).toBeGreaterThan(0);
-    expect(result.agentsMdPath).toBe(join(testDir, "AGENTS.md"));
+    expect(result.agentsMdPath).toBe(join(testDir, TARGET_FILE));
   });
 
   it("detects changes after modifying a skill file", async () => {
@@ -66,7 +52,7 @@ describe("sync", () => {
     await syncSkills(testDir);
 
     // Modify the SKILL.md description
-    const skillMdPath = join(testDir, ".agents", "skills", "my-skill", "SKILL.md");
+    const skillMdPath = join(testDir, ...SKILLS_DIR_SEGMENTS, "my-skill", "SKILL.md");
     await writeFile(skillMdPath, "---\ndescription: Updated description\n---\n");
 
     const result = await syncSkills(testDir);
@@ -81,7 +67,10 @@ describe("sync", () => {
     await syncSkills(testDir);
 
     // Delete the stale skill directory
-    await rm(join(testDir, ".agents", "skills", "stale-skill"), { recursive: true, force: true });
+    await rm(join(testDir, ...SKILLS_DIR_SEGMENTS, "stale-skill"), {
+      recursive: true,
+      force: true,
+    });
 
     const result = await syncSkills(testDir);
 
@@ -105,7 +94,10 @@ describe("sync", () => {
     await syncSkills(testDir);
 
     // Add a new file
-    await writeFile(join(testDir, ".agents", "skills", "my-skill", "extra.md"), "# Extra content");
+    await writeFile(
+      join(testDir, ...SKILLS_DIR_SEGMENTS, "my-skill", "extra.md"),
+      "# Extra content",
+    );
 
     const result = await syncSkills(testDir);
 
@@ -117,14 +109,14 @@ describe("sync", () => {
     await syncSkills(testDir);
 
     // Remove a file from the skill
-    await rm(join(testDir, ".agents", "skills", "my-skill", "extra.md"));
+    await rm(join(testDir, ...SKILLS_DIR_SEGMENTS, "my-skill", "extra.md"));
 
     const result = await syncSkills(testDir);
 
     expect(result.changed).toBe(true);
     expect(result.removed).toEqual([]);
 
-    const agentsMd = await readFile(join(testDir, "AGENTS.md"), "utf-8");
+    const agentsMd = await readFile(join(testDir, TARGET_FILE), "utf-8");
     expect(agentsMd).toContain("|{guide.md}");
     expect(agentsMd).not.toContain("extra.md");
   });
@@ -135,8 +127,8 @@ describe("sync", () => {
     await setupIndexedSkill("stale-2", "Gone 2", ["c.md"]);
     await syncSkills(testDir);
 
-    await rm(join(testDir, ".agents", "skills", "stale-1"), { recursive: true, force: true });
-    await rm(join(testDir, ".agents", "skills", "stale-2"), { recursive: true, force: true });
+    await rm(join(testDir, ...SKILLS_DIR_SEGMENTS, "stale-1"), { recursive: true, force: true });
+    await rm(join(testDir, ...SKILLS_DIR_SEGMENTS, "stale-2"), { recursive: true, force: true });
 
     const result = await syncSkills(testDir);
 
@@ -156,7 +148,7 @@ describe("sync", () => {
 
     expect(result.changed).toBe(true);
 
-    const agentsMd = await readFile(join(testDir, "AGENTS.md"), "utf-8");
+    const agentsMd = await readFile(join(testDir, TARGET_FILE), "utf-8");
     expect(agentsMd).toContain(START_TAG);
     expect(agentsMd).toContain(END_TAG);
     expect(agentsMd).toContain("[alpha]");

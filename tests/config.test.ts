@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { readConfig, writeConfig } from "../src/lib/config.js";
+import { CONFIG_FILENAME, TARGET_FILE } from "../src/lib/constants.js";
 import type { Config } from "../src/lib/types.js";
 
 describe("config", () => {
@@ -31,14 +32,14 @@ describe("config", () => {
   it("reads existing config file", async () => {
     const testConfig: Config = {
       version: 1,
-      target: "AGENTS.md",
+      target: TARGET_FILE,
       skills: [
         { name: "react-patterns", path: ".agents/skills/react-patterns" },
         { name: "testing", path: ".agents/skills/testing" },
       ],
     };
 
-    const configPath = join(testDir, "skilldex.config.json");
+    const configPath = join(testDir, CONFIG_FILENAME);
     await writeFile(configPath, JSON.stringify(testConfig), "utf-8");
 
     const config = await readConfig(testDir);
@@ -53,23 +54,23 @@ describe("config", () => {
   it("writes config to file", async () => {
     const testConfig: Config = {
       version: 1,
-      target: "AGENTS.md",
+      target: TARGET_FILE,
       skills: [{ name: "my-skill", path: ".agents/skills/my-skill" }],
     };
 
     await writeConfig(testDir, testConfig);
 
-    const content = await readFile(join(testDir, "skilldex.config.json"), "utf-8");
+    const content = await readFile(join(testDir, CONFIG_FILENAME), "utf-8");
     const parsed = JSON.parse(content) as Config;
 
     expect(parsed.version).toBe(1);
-    expect(parsed.target).toBe("AGENTS.md");
+    expect(parsed.target).toBe(TARGET_FILE);
     expect(parsed.skills).toHaveLength(1);
     expect(parsed.skills[0].name).toBe("my-skill");
   });
 
   it("returns default config on invalid JSON", async () => {
-    const configPath = join(testDir, "skilldex.config.json");
+    const configPath = join(testDir, CONFIG_FILENAME);
     await writeFile(configPath, "invalid json {", "utf-8");
 
     const config = await readConfig(testDir);
@@ -80,7 +81,7 @@ describe("config", () => {
   });
 
   it("returns default config on malformed structure", async () => {
-    const configPath = join(testDir, "skilldex.config.json");
+    const configPath = join(testDir, CONFIG_FILENAME);
     await writeFile(configPath, JSON.stringify({ version: 1 }), "utf-8");
 
     const config = await readConfig(testDir);
@@ -93,7 +94,7 @@ describe("config", () => {
   it("preserves formatting when writing config", async () => {
     const testConfig: Config = {
       version: 1,
-      target: "AGENTS.md",
+      target: TARGET_FILE,
       skills: [
         { name: "skill-a", path: ".agents/skills/skill-a" },
         { name: "skill-b", path: ".agents/skills/skill-b" },
@@ -102,7 +103,7 @@ describe("config", () => {
 
     await writeConfig(testDir, testConfig);
 
-    const content = await readFile(join(testDir, "skilldex.config.json"), "utf-8");
+    const content = await readFile(join(testDir, CONFIG_FILENAME), "utf-8");
 
     // Should be pretty-printed JSON (with indentation)
     expect(content).toContain("\n");
@@ -112,7 +113,7 @@ describe("config", () => {
   it("sorts skills alphabetically by name when writing", async () => {
     const testConfig: Config = {
       version: 1,
-      target: "AGENTS.md",
+      target: TARGET_FILE,
       skills: [
         { name: "zulu", path: ".agents/skills/zulu" },
         { name: "alpha", path: ".agents/skills/alpha" },
@@ -129,7 +130,7 @@ describe("config", () => {
   it("can read config after multiple writes", async () => {
     const config1: Config = {
       version: 1,
-      target: "AGENTS.md",
+      target: TARGET_FILE,
       skills: [{ name: "skill-a", path: ".agents/skills/skill-a" }],
     };
 
@@ -137,7 +138,7 @@ describe("config", () => {
 
     const config2: Config = {
       version: 1,
-      target: "AGENTS.md",
+      target: TARGET_FILE,
       skills: [
         { name: "skill-a", path: ".agents/skills/skill-a" },
         { name: "skill-b", path: ".agents/skills/skill-b" },

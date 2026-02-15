@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { INDEX_HEADER, SKILLS_DIR_SEGMENTS } from "../src/lib/constants.js";
 import { generateIndex } from "../src/lib/indexer.js";
 import type { DiscoveredSkill } from "../src/lib/types.js";
 
@@ -9,7 +10,7 @@ describe("generateIndex", () => {
   it("generates index with header lines", () => {
     const skills: DiscoveredSkill[] = [];
     const result = generateIndex(skills, projectRoot);
-    expect(result).toContain("[Skills Index]");
+    expect(result).toContain(INDEX_HEADER);
     expect(result).toContain("|IMPORTANT:");
   });
 
@@ -18,7 +19,7 @@ describe("generateIndex", () => {
       {
         name: "react-patterns",
         description: "React best practices",
-        path: join(projectRoot, ".agents", "skills", "react-patterns"),
+        path: join(projectRoot, ...SKILLS_DIR_SEGMENTS, "react-patterns"),
         files: [{ relativePath: "hooks.md", name: "hooks" }],
       },
     ];
@@ -34,7 +35,7 @@ describe("generateIndex", () => {
       {
         name: "no-desc",
         description: "",
-        path: join(projectRoot, ".agents", "skills", "no-desc"),
+        path: join(projectRoot, ...SKILLS_DIR_SEGMENTS, "no-desc"),
         files: [],
       },
     ];
@@ -48,7 +49,7 @@ describe("generateIndex", () => {
       {
         name: "multi-dir",
         description: "",
-        path: join(projectRoot, ".agents", "skills", "multi-dir"),
+        path: join(projectRoot, ...SKILLS_DIR_SEGMENTS, "multi-dir"),
         files: [
           { relativePath: "root-file.md", name: "root-file" },
           { relativePath: "patterns/hooks.md", name: "hooks" },
@@ -67,13 +68,13 @@ describe("generateIndex", () => {
       {
         name: "skill-a",
         description: "First",
-        path: join(projectRoot, ".agents", "skills", "skill-a"),
+        path: join(projectRoot, ...SKILLS_DIR_SEGMENTS, "skill-a"),
         files: [{ relativePath: "guide.md", name: "guide" }],
       },
       {
         name: "skill-b",
         description: "Second",
-        path: join(projectRoot, ".agents", "skills", "skill-b"),
+        path: join(projectRoot, ...SKILLS_DIR_SEGMENTS, "skill-b"),
         files: [{ relativePath: "docs.md", name: "docs" }],
       },
     ];
