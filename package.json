@@ -12,7 +12,8 @@
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "lint": "biome check .",
-    "format": "biome check --write ."
+    "format": "biome check --write .",
+    "prepublishOnly": "pnpm build && pnpm test"
   },
   "bin": {
     "skilldex": "./dist/cli/index.js"
@@ -29,9 +30,26 @@
     "agents",
     "skills",
     "cli",
-    "agents-md"
+    "agents-md",
+    "claude",
+    "cursor",
+    "copilot",
+    "passive-context",
+    "llm"
   ],
+  "author": "Nafis Azizi Riza",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nafisazizir/skilldex.git"
+  },
+  "homepage": "https://github.com/nafisazizir/skilldex#readme",
+  "bugs": {
+    "url": "https://github.com/nafisazizir/skilldex/issues"
+  },
+  "files": [
+    "dist"
+  ],
   "engines": {
     "node": ">=18"
   },

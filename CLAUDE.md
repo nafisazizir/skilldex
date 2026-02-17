@@ -53,9 +53,3 @@ tests/              # Test files (vitest)
 - **Agent name is primary, path is secondary.** In interactive selects, show the agent display name as the label and the skill path as the `hint` (only visible on hover). Never combine both in the label.
 - `getAgentDisplayName()` maps a relative skill path to its agent's display name (e.g., `.cursor/skills/foo` → `"Cursor"`). Falls back to showing the raw path when no agent matches.
 - For name collisions in `init`, the label is `skillName - AgentName` with the path as hint.
-
-## Dev Notes
-
-Private dev notes (gitignored) are in `.dev/`:
-- `.dev/prd.md` — Full product requirements document
-- `.dev/decisions.md` — Architecture and naming decisions with rationale
