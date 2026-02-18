@@ -34,6 +34,8 @@ export type {
   SkillInfo,
   SyncResult,
   TargetFileInfo,
+  UpdateResult,
 } from "./lib/types.js";
+export { updateSkill } from "./lib/update.js";
 export type { RegenerateResult } from "./lib/writer.js";
 export { buildManagedSection, regenerateFromConfig, writeTargetFile } from "./lib/writer.js";

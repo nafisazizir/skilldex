@@ -84,3 +84,10 @@ export interface SyncResult {
   managedSize: number;
   targets: TargetFileInfo[];
 }
+
+export interface UpdateResult {
+  /** Display names of the skills that were updated */
+  updated: string[];
+  managedSize: number;
+  targets: TargetFileInfo[];
+}
