@@ -10,6 +10,7 @@ import { listSkills } from "../lib/list.js";
 import { removeSkill } from "../lib/remove.js";
 import { scanForSkills } from "../lib/scanner.js";
 import { syncSkills } from "../lib/sync.js";
+import { updateSkill } from "../lib/update.js";
 import { formatSkillPath, handleCommandError, logContextSize, pluralize } from "./format.js";
 
 const program = new Command();
@@ -321,6 +322,72 @@ program
       } else {
         p.outro(pc.green("Everything up to date"));
       }
+    } catch (error) {
+      handleCommandError(error, s);
+    }
+  });
+
+program
+  .command("update <skill>")
+  .description("Refresh the index for a specific skill")
+  .action(async (skillName: string) => {
+    p.intro(pc.bgCyan(pc.black(" skilldex update ")));
+
+    const projectRoot = process.cwd();
+    const s = p.spinner();
+
+    try {
+      let resolvedPaths: string[];
+
+      if (!skillName.includes("/")) {
+        const config = await readConfig(projectRoot);
+        const matches = config.skills.filter((sk) => sk.name === skillName);
+
+        if (matches.length === 0) {
+          p.outro(
+            pc.yellow(
+              `Skill "${skillName}" is not indexed. Run 'skilldex add ${skillName}' to index it.`,
+            ),
+          );
+          return;
+        }
+
+        if (matches.length === 1) {
+          resolvedPaths = [matches[0].path];
+        } else {
+          // Multiple indexed skills with the same name — let the user pick one or more
+          const selected = await p.multiselect({
+            message: `Multiple skills named "${skillName}" are indexed. Which to update?`,
+            options: matches.map((sk) => {
+              const agent = getAgentDisplayName(sk.path);
+              return { value: sk.path, label: agent ?? sk.path, hint: sk.path };
+            }),
+            initialValues: matches.map((sk) => sk.path),
+            required: true,
+          });
+
+          if (p.isCancel(selected)) {
+            p.cancel("Update cancelled.");
+            process.exit(0);
+          }
+
+          resolvedPaths = selected;
+        }
+      } else {
+        resolvedPaths = [skillName];
+      }
+
+      const count = resolvedPaths.length;
+      s.start(`Updating ${count} ${pluralize(count, "skill", "skills")}...`);
+      const result = await updateSkill(projectRoot, resolvedPaths);
+      s.stop(`✓ ${pluralize(count, "Skill", "Skills")} updated`);
+
+      logContextSize(result.managedSize, result.targets);
+      p.outro(
+        pc.green(
+          `Updated ${result.updated.map((n) => `"${n}"`).join(", ")} in ${result.targets.map((t) => t.file).join(", ")}`,
+        ),
+      );
     } catch (error) {
       handleCommandError(error, s);
     }
