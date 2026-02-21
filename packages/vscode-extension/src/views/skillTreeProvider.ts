@@ -1,3 +1,4 @@
+import * as path from "node:path";
 import type { SkillInfo } from "skilldex";
 import { getAgentDisplayName, listSkills } from "skilldex";
 import * as vscode from "vscode";
@@ -24,6 +25,16 @@ export class SkillTreeItem extends vscode.TreeItem {
         this.iconPath = new vscode.ThemeIcon("check");
       } else {
         this.iconPath = new vscode.ThemeIcon("circle-outline");
+      }
+
+      const projectRoot = getProjectRoot();
+      if (projectRoot) {
+        const skillMdPath = vscode.Uri.file(path.join(projectRoot, skill.path, "SKILL.md"));
+        this.command = {
+          command: "vscode.open",
+          title: "Open SKILL.md",
+          arguments: [skillMdPath],
+        };
       }
     }
   }
