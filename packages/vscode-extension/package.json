@@ -2,9 +2,14 @@
   "name": "skilldex-vscode",
   "displayName": "Skilldex",
   "description": "Manage AI agent skills with passive context indexing",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "publisher": "skilldex",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nafisazizir/skilldex.git",
+    "directory": "packages/vscode-extension"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -50,7 +55,7 @@
         {
           "id": "skilldex",
           "title": "Skilldex",
-          "icon": "$(book)"
+          "icon": "media/sidebar-icon.svg"
         }
       ]
     },
