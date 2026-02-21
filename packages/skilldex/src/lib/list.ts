@@ -9,17 +9,13 @@ export async function listSkills(projectRoot: string): Promise<ListResult> {
   const indexedPaths = new Set(config.skills.map((s) => s.path));
   const skillMap = new Map(allSkills.map((s) => [s.relativePath, s]));
 
-  const indexed: SkillInfo[] = config.skills
-    .map((entry) => {
-      const discovered = skillMap.get(entry.path);
-      if (!discovered) return undefined;
-      return {
-        name: entry.name,
-        path: entry.path,
-        description: discovered.description,
-      };
-    })
-    .filter((s) => s !== undefined);
+  const indexed: SkillInfo[] = config.skills.map((entry) => {
+    const discovered = skillMap.get(entry.path);
+    if (!discovered) {
+      return { name: entry.name, path: entry.path, description: "", missing: true };
+    }
+    return { name: entry.name, path: entry.path, description: discovered.description };
+  });
 
   const available: SkillInfo[] = allSkills
     .filter((s) => !indexedPaths.has(s.relativePath))

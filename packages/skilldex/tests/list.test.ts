@@ -80,7 +80,7 @@ describe("listSkills", () => {
     expect(result2.available.find((s) => s.name === "no-desc-avail")?.description).toBe("");
   });
 
-  it("skips indexed skills whose directories were deleted", async () => {
+  it("marks indexed skills whose directories were deleted as missing", async () => {
     const testDir = getDir();
     await createSkill(testDir, "exists", "Still here", { "a.md": "content" });
     await createSkill(testDir, "gone", "Will be removed", { "b.md": "content" });
@@ -93,7 +93,11 @@ describe("listSkills", () => {
 
     const result = await listSkills(testDir);
 
-    expect(result.indexed).toHaveLength(1);
+    expect(result.indexed).toHaveLength(2);
     expect(result.indexed[0].name).toBe("exists");
+    expect(result.indexed[0].missing).toBeUndefined();
+    expect(result.indexed[1].name).toBe("gone");
+    expect(result.indexed[1].missing).toBe(true);
+    expect(result.indexed[1].description).toBe("");
   });
 });
