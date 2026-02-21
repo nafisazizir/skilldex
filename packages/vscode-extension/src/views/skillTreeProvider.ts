@@ -19,22 +19,32 @@ export class SkillTreeItem extends vscode.TreeItem {
     if (skill) {
       const agentName = getAgentDisplayName(skill.path);
       this.description = agentName ?? skill.path;
-      this.tooltip = `${skill.name}\n${skill.path}${skill.description ? `\n${skill.description}` : ""}`;
 
-      if (type === "indexedSkill") {
-        this.iconPath = new vscode.ThemeIcon("check");
+      if (skill.missing) {
+        this.description = `${agentName ?? skill.path} (missing)`;
+        this.iconPath = new vscode.ThemeIcon(
+          "warning",
+          new vscode.ThemeColor("list.warningForeground"),
+        );
+        this.tooltip = `${skill.name}\n${skill.path}\n(missing from disk)`;
       } else {
-        this.iconPath = new vscode.ThemeIcon("circle-outline");
-      }
+        this.tooltip = `${skill.name}\n${skill.path}${skill.description ? `\n${skill.description}` : ""}`;
 
-      const projectRoot = getProjectRoot();
-      if (projectRoot) {
-        const skillMdPath = vscode.Uri.file(path.join(projectRoot, skill.path, "SKILL.md"));
-        this.command = {
-          command: "vscode.open",
-          title: "Open SKILL.md",
-          arguments: [skillMdPath],
-        };
+        if (type === "indexedSkill") {
+          this.iconPath = new vscode.ThemeIcon("check");
+        } else {
+          this.iconPath = new vscode.ThemeIcon("circle-outline");
+        }
+
+        const projectRoot = getProjectRoot();
+        if (projectRoot) {
+          const skillMdPath = vscode.Uri.file(path.join(projectRoot, skill.path, "SKILL.md"));
+          this.command = {
+            command: "vscode.open",
+            title: "Open SKILL.md",
+            arguments: [skillMdPath],
+          };
+        }
       }
     }
   }
@@ -46,9 +56,26 @@ export class SkillTreeProvider implements vscode.TreeDataProvider<SkillTreeItem>
 
   private indexed: SkillInfo[] = [];
   private available: SkillInfo[] = [];
+  private debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
+  /** Immediate refresh — use for command-driven updates. */
   refresh(): void {
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer);
+      this.debounceTimer = undefined;
+    }
     this._onDidChangeTreeData.fire(undefined);
+  }
+
+  /** Debounced refresh (300ms) — use for file watcher events to batch rapid changes. */
+  debouncedRefresh(): void {
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer);
+    }
+    this.debounceTimer = setTimeout(() => {
+      this.debounceTimer = undefined;
+      this._onDidChangeTreeData.fire(undefined);
+    }, 300);
   }
 
   getTreeItem(element: SkillTreeItem): vscode.TreeItem {
