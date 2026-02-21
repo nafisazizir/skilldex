@@ -55,18 +55,18 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("skilldex.refresh", () => treeProvider.refresh()),
   );
 
-  // File watchers
+  // File watchers — debounced to batch rapid filesystem events (e.g. git checkout)
   const configWatcher = vscode.workspace.createFileSystemWatcher("**/skilldex.config.json");
-  configWatcher.onDidChange(() => treeProvider.refresh());
-  configWatcher.onDidCreate(() => treeProvider.refresh());
-  configWatcher.onDidDelete(() => treeProvider.refresh());
+  configWatcher.onDidChange(() => treeProvider.debouncedRefresh());
+  configWatcher.onDidCreate(() => treeProvider.debouncedRefresh());
+  configWatcher.onDidDelete(() => treeProvider.debouncedRefresh());
 
-  // TODO: incllude every skills based on the registry path
   const skillWatcher = vscode.workspace.createFileSystemWatcher(
-    "**/{.agents,.claude,.cursor,.windsurf,.agent}/skills/*/SKILL.md",
+    "**/{.agents,.claude,.cursor,.windsurf,.agent}/skills/**",
   );
-  skillWatcher.onDidCreate(() => treeProvider.refresh());
-  skillWatcher.onDidDelete(() => treeProvider.refresh());
+  skillWatcher.onDidCreate(() => treeProvider.debouncedRefresh());
+  skillWatcher.onDidChange(() => treeProvider.debouncedRefresh());
+  skillWatcher.onDidDelete(() => treeProvider.debouncedRefresh());
 
   context.subscriptions.push(treeView, configWatcher, skillWatcher);
 }

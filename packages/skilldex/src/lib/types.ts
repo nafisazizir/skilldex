@@ -69,6 +69,8 @@ export interface SkillInfo {
   /** Relative path from project root */
   path: string;
   description: string;
+  /** true when the skill is indexed but its directory no longer exists on disk */
+  missing?: boolean;
 }
 
 export interface ListResult {
