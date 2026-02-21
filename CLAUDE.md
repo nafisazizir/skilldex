@@ -1,16 +1,16 @@
 # skilldex
 
-CLI tool that indexes AI agent skills into passive context (AGENTS.md). Based on Vercel's research showing 100% pass rate with passive context vs 53% with active skill retrieval.
+CLI tool + VS Code extension that indexes AI agent skills into passive context (AGENTS.md). Based on Vercel's research showing 100% pass rate with passive context vs 53% with active skill retrieval.
 
 ## Tech Stack
 
 - **Language:** TypeScript (strict mode)
 - **Runtime:** Node.js >=18
-- **Package manager:** pnpm
+- **Package manager:** pnpm (workspaces)
 - **CLI framework:** Commander.js
 - **Interactive prompts:** @clack/prompts
 - **Terminal styling:** picocolors
-- **Build:** tsup (dual CJS/ESM)
+- **Build:** tsup (CLI/lib), esbuild (VS Code extension)
 - **Test:** vitest
 - **Lint/Format:** Biome
 
@@ -18,9 +18,8 @@ CLI tool that indexes AI agent skills into passive context (AGENTS.md). Based on
 ## Commands
 
 ```bash
-pnpm build          # Build with tsup
-pnpm dev            # Build in watch mode
-pnpm test           # Run tests with vitest
+pnpm build          # Build all packages
+pnpm test           # Run all tests
 pnpm lint           # Lint with Biome
 pnpm format         # Format with Biome
 ```
@@ -28,15 +27,22 @@ pnpm format         # Format with Biome
 ## Architecture
 
 ```
-src/
-├── cli/            # CLI entry point and command handlers (Commander.js)
-│   └── index.ts    # CLI entry point
-├── lib/            # Core logic (programmatic API, importable)
-└── index.ts        # Library entry point
-tests/              # Test files (vitest)
+packages/
+├── skilldex/               # CLI + library (npm published)
+│   ├── src/
+│   │   ├── cli/            # CLI entry point (Commander.js)
+│   │   ├── lib/            # Core logic (programmatic API)
+│   │   └── index.ts        # Library entry point
+│   └── tests/
+└── vscode-extension/       # VS Code/Cursor extension
+    └── src/
+        ├── extension.ts    # activate/deactivate
+        ├── commands/       # Command handlers (init, add, remove, sync, update)
+        ├── views/          # TreeView provider
+        └── utils/          # Workspace helpers
 ```
 
-**Key principle:** `src/lib/` contains all core logic as a programmatic API. `src/cli/` is a thin layer that calls into lib. This enables future integrations (VS Code extension, other tools) and makes testing easier.
+**Key principle:** `packages/skilldex/src/lib/` contains all core logic as a programmatic API. Both the CLI (`src/cli/`) and VS Code extension import from the lib. The extension uses `"skilldex": "workspace:*"` to import the lib directly.
 
 ## Conventions
 
