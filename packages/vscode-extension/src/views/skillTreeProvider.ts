@@ -1,0 +1,116 @@
+import type { SkillInfo } from "skilldex";
+import { getAgentDisplayName, listSkills } from "skilldex";
+import * as vscode from "vscode";
+import { getProjectRoot } from "../utils/workspace.js";
+
+type TreeItemType = "indexedGroup" | "availableGroup" | "indexedSkill" | "availableSkill";
+
+export class SkillTreeItem extends vscode.TreeItem {
+  constructor(
+    public readonly type: TreeItemType,
+    label: string,
+    collapsibleState: vscode.TreeItemCollapsibleState,
+    public readonly skill?: SkillInfo,
+  ) {
+    super(label, collapsibleState);
+    this.contextValue = type;
+
+    if (skill) {
+      const agentName = getAgentDisplayName(skill.path);
+      this.description = agentName ?? skill.path;
+      this.tooltip = `${skill.name}\n${skill.path}${skill.description ? `\n${skill.description}` : ""}`;
+
+      if (type === "indexedSkill") {
+        this.iconPath = new vscode.ThemeIcon("check");
+      } else {
+        this.iconPath = new vscode.ThemeIcon("circle-outline");
+      }
+    }
+  }
+}
+
+export class SkillTreeProvider implements vscode.TreeDataProvider<SkillTreeItem> {
+  private _onDidChangeTreeData = new vscode.EventEmitter<SkillTreeItem | undefined>();
+  readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
+
+  private indexed: SkillInfo[] = [];
+  private available: SkillInfo[] = [];
+
+  refresh(): void {
+    this._onDidChangeTreeData.fire(undefined);
+  }
+
+  getTreeItem(element: SkillTreeItem): vscode.TreeItem {
+    return element;
+  }
+
+  async getChildren(element?: SkillTreeItem): Promise<SkillTreeItem[]> {
+    const projectRoot = getProjectRoot();
+    if (!projectRoot) {
+      return [];
+    }
+
+    if (!element) {
+      // Root level: load data and return group nodes
+      try {
+        const result = await listSkills(projectRoot);
+        this.indexed = result.indexed;
+        this.available = result.available;
+      } catch {
+        this.indexed = [];
+        this.available = [];
+      }
+
+      const items: SkillTreeItem[] = [];
+
+      items.push(
+        new SkillTreeItem(
+          "indexedGroup",
+          `Indexed (${this.indexed.length})`,
+          this.indexed.length > 0
+            ? vscode.TreeItemCollapsibleState.Expanded
+            : vscode.TreeItemCollapsibleState.None,
+        ),
+      );
+
+      items.push(
+        new SkillTreeItem(
+          "availableGroup",
+          `Available (${this.available.length})`,
+          this.available.length > 0
+            ? vscode.TreeItemCollapsibleState.Expanded
+            : vscode.TreeItemCollapsibleState.None,
+        ),
+      );
+
+      return items;
+    }
+
+    // Group children
+    if (element.type === "indexedGroup") {
+      return this.indexed.map(
+        (skill) =>
+          new SkillTreeItem(
+            "indexedSkill",
+            skill.name,
+            vscode.TreeItemCollapsibleState.None,
+            skill,
+          ),
+      );
+    }
+
+    if (element.type === "availableGroup") {
+      return this.available.map(
+        (skill) =>
+          new SkillTreeItem(
+            "availableSkill",
+            skill.name,
+            vscode.TreeItemCollapsibleState.None,
+            skill,
+          ),
+      );
+    }
+
+    return [];
+  }
+}

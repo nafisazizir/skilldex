@@ -1,0 +1,128 @@
+{
+  "name": "skilldex-vscode",
+  "displayName": "Skilldex",
+  "description": "Manage AI agent skills with passive context indexing",
+  "version": "0.0.1",
+  "publisher": "skilldex",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": [
+    "workspaceContains:skilldex.config.json",
+    "workspaceContains:.agents/skills",
+    "workspaceContains:.claude/skills",
+    "workspaceContains:.cursor/skills"
+  ],
+  "main": "./dist/extension.js",
+  "icon": "media/icon.png",
+  "contributes": {
+    "commands": [
+      {
+        "command": "skilldex.init",
+        "title": "Initialize"
+      },
+      {
+        "command": "skilldex.add",
+        "title": "Add Skill"
+      },
+      {
+        "command": "skilldex.remove",
+        "title": "Remove Skill"
+      },
+      {
+        "command": "skilldex.sync",
+        "title": "Sync Skills"
+      },
+      {
+        "command": "skilldex.update",
+        "title": "Update Skills"
+      },
+      {
+        "command": "skilldex.refresh",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "skilldex",
+          "title": "Skilldex",
+          "icon": "$(book)"
+        }
+      ]
+    },
+    "views": {
+      "skilldex": [
+        {
+          "id": "skilldexSkills",
+          "name": "Skills",
+          "when": "skilldex.hasWorkspace"
+        },
+        {
+          "id": "skilldexWelcome",
+          "name": "Welcome",
+          "when": "!skilldex.hasWorkspace"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "skilldexWelcome",
+        "contents": "No workspace folder open.\n\nOpen a folder to manage skills with Skilldex."
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "skilldex.refresh",
+          "when": "view == skilldexSkills",
+          "group": "navigation"
+        },
+        {
+          "command": "skilldex.add",
+          "when": "view == skilldexSkills"
+        },
+        {
+          "command": "skilldex.sync",
+          "when": "view == skilldexSkills"
+        },
+        {
+          "command": "skilldex.update",
+          "when": "view == skilldexSkills"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "skilldex.add",
+          "when": "view == skilldexSkills && viewItem == availableSkill",
+          "group": "inline"
+        },
+        {
+          "command": "skilldex.remove",
+          "when": "view == skilldexSkills && viewItem == indexedSkill",
+          "group": "inline"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "test": "echo 'No tests yet'",
+    "vscode:package": "vsce package --no-dependencies",
+    "vscode:publish": "vsce publish --no-dependencies",
+    "ovsx:publish": "ovsx publish"
+  },
+  "dependencies": {
+    "skilldex": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.3.2",
+    "esbuild": "^0.27.3",
+    "ovsx": "^0.10.1"
+  }
+}
