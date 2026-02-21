@@ -2,7 +2,7 @@
   "name": "skilldex-vscode",
   "displayName": "Skilldex",
   "description": "Manage AI agent skills with passive context indexing",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "publisher": "skilldex",
   "license": "MIT",
   "engines": {

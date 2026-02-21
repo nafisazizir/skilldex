@@ -1,0 +1,51 @@
+name: Publish VS Code Extension
+
+on:
+  push:
+    tags: ["vscode-v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter skilldex build
+      - run: pnpm --filter skilldex-vscode build
+
+      - name: Verify tag matches package.json version
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#vscode-v}"
+          PKG_VERSION=$(node -p "require('./packages/vscode-extension/package.json').version")
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::Tag version ($TAG_VERSION) does not match package.json version ($PKG_VERSION)"
+            exit 1
+          fi
+
+      - name: Package extension
+        run: pnpm --filter skilldex-vscode vscode:package
+        working-directory: .
+
+      - name: Publish to VS Code Marketplace
+        run: pnpm --filter skilldex-vscode vscode:publish
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
+      - name: Publish to Open VSX
+        run: pnpm --filter skilldex-vscode ovsx:publish
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_TOKEN }}
+
+      - name: Upload .vsix to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: packages/vscode-extension/*.vsix
