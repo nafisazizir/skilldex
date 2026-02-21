@@ -50,7 +50,7 @@
         {
           "id": "skilldex",
           "title": "Skilldex",
-          "icon": "$(book)"
+          "icon": "media/sidebar-icon.svg"
         }
       ]
     },
