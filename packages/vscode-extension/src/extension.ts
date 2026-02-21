@@ -68,7 +68,15 @@ export function activate(context: vscode.ExtensionContext): void {
   skillWatcher.onDidChange(() => treeProvider.debouncedRefresh());
   skillWatcher.onDidDelete(() => treeProvider.debouncedRefresh());
 
-  context.subscriptions.push(treeView, configWatcher, skillWatcher);
+  // Watch the agent directories themselves — FileSystemWatcher doesn't reliably
+  // fire for files inside a deleted parent directory, so we watch the parent too.
+  const agentDirWatcher = vscode.workspace.createFileSystemWatcher(
+    "**/{.agents,.claude,.cursor,.windsurf,.agent}",
+  );
+  agentDirWatcher.onDidCreate(() => treeProvider.debouncedRefresh());
+  agentDirWatcher.onDidDelete(() => treeProvider.debouncedRefresh());
+
+  context.subscriptions.push(treeView, configWatcher, skillWatcher, agentDirWatcher);
 }
 
 export function deactivate(): void {
